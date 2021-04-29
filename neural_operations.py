@@ -51,6 +51,16 @@ def act(t):
     # The following implementation has lower memory.
     return SwishFN.apply(t)
 
+class Upsampling1D(torch.nn.Module):
+    def __init__(self, scale_factor):
+        super(Upsampling1D, self).__init__()
+        self.upsampling2D = nn.UpsamplingNearest2d(scale_factor=scale_factor)
+
+    def forward(self, x):
+        x = torch.unsqueeze(x,3)
+        x = self.upsampling2D(x)
+        x = x[:,:,:,0]
+        return x
 
 class Swish(nn.Module):
     def __init__(self):
@@ -67,7 +77,7 @@ def normalize_weight_jit(log_weight_norm, weight):
     return weight
 
 
-class Conv2D(nn.Conv2d):
+class Conv1D(nn.Conv1d):
     """Allows for weights as input."""
 
     def __init__(self, C_in, C_out, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False, data_init=False,
@@ -76,11 +86,11 @@ class Conv2D(nn.Conv2d):
         Args:
             use_shared (bool): Use weights for this layer or not?
         """
-        super(Conv2D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
+        super(Conv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
 
         self.log_weight_norm = None
         if weight_norm:
-            init = norm(self.weight, dim=[1, 2, 3]).view(-1, 1, 1, 1)
+            init = norm(self.weight, dim=[1, 2]).view(-1, 1, 1)
             self.log_weight_norm = nn.Parameter(torch.log(init + 1e-2), requires_grad=True)
 
         self.data_init = data_init
@@ -96,11 +106,11 @@ class Conv2D(nn.Conv2d):
         # do data based initialization
         if self.data_init and not self.init_done:
             with torch.no_grad():
-                weight = self.weight / (norm(self.weight, dim=[1, 2, 3]).view(-1, 1, 1, 1) + 1e-5)
+                weight = self.weight / (norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-5)
                 bias = None
-                out = F.conv2d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
-                mn = torch.mean(out, dim=[0, 2, 3])
-                st = 5 * torch.std(out, dim=[0, 2, 3])
+                out = F.conv1d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
+                mn = torch.mean(out, dim=[0, 2])
+                st = 5 * torch.std(out, dim=[0, 2])
 
                 # get mn and st from other GPUs
                 average_tensor(mn, is_distributed=True)
@@ -108,13 +118,13 @@ class Conv2D(nn.Conv2d):
 
                 if self.bias is not None:
                     self.bias.data = - mn / (st + 1e-5)
-                self.log_weight_norm.data = -torch.log((st.view(-1, 1, 1, 1) + 1e-5))
+                self.log_weight_norm.data = -torch.log((st.view(-1, 1, 1) + 1e-5))
                 self.init_done = True
 
         self.weight_normalized = self.normalize_weight()
 
         bias = self.bias
-        return F.conv2d(x, self.weight_normalized, bias, self.stride,
+        return F.conv1d(x, self.weight_normalized, bias, self.stride,
                         self.padding, self.dilation, self.groups)
 
     def normalize_weight(self):
@@ -196,7 +206,7 @@ class BNSwishConv(nn.Module):
         self.upsample = stride == -1
         stride = abs(stride)
         self.bn_act = SyncBatchNormSwish(C_in, eps=BN_EPS, momentum=0.05)
-        self.conv_0 = Conv2D(C_in, C_out, kernel_size, stride=stride, padding=padding, bias=True, dilation=dilation)
+        self.conv_0 = Conv1D(C_in, C_out, kernel_size, stride=stride, padding=padding, bias=True, dilation=dilation)
 
     def forward(self, x):
         """
@@ -271,7 +281,7 @@ class ConvBNSwish(nn.Module):
         super(ConvBNSwish, self).__init__()
 
         self.conv = nn.Sequential(
-            Conv2D(Cin, Cout, k, stride, padding, groups=groups, bias=False, dilation=dilation, weight_norm=False),
+            Conv1D(Cin, Cout, k, stride, padding, groups=groups, bias=False, dilation=dilation, weight_norm=False),
             SyncBatchNormSwish(Cout, eps=BN_EPS, momentum=0.05)  # drop in replacement for BN + Swish
         )
 
@@ -306,11 +316,11 @@ class InvertedResidual(nn.Module):
         self.stride = abs(self.stride)
         groups = hidden_dim if g == 0 else g
 
-        layers0 = [nn.UpsamplingNearest2d(scale_factor=2)] if self.upsample else []
+        layers0 = [nn.Upsampling1d(scale_factor=2)] if self.upsample else []
         layers = [get_batchnorm(Cin, eps=BN_EPS, momentum=0.05),
                   ConvBNSwish(Cin, hidden_dim, k=1),
                   ConvBNSwish(hidden_dim, hidden_dim, stride=self.stride, groups=groups, k=k, dilation=dil),
-                  Conv2D(hidden_dim, Cout, 1, 1, 0, bias=False, weight_norm=False),
+                  Conv1D(hidden_dim, Cout, 1, 1, 0, bias=False, weight_norm=False),
                   get_batchnorm(Cout, momentum=0.05)]
 
         layers0.extend(layers)
