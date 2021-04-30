@@ -57,12 +57,12 @@ def channel_mask(c_in, g_in, c_out, zero_diag):
 
 def create_conv_mask(kernel_size, c_in, g_in, c_out, zero_diag, mirror):
     m = (kernel_size - 1) // 2
-    mask = np.ones([c_out, c_in // g_in, kernel_size, kernel_size], dtype=np.float32)
+    mask = np.ones([c_out, c_in // g_in, kernel_size], dtype=np.float32)
     mask[:, :, m:, :] = 0
     mask[:, :, m, :m] = 1
     mask[:, :, m, m] = channel_mask(c_in, g_in, c_out, zero_diag)
     if mirror:
-        mask = np.copy(mask[:, :, ::-1, ::-1])
+        mask = np.copy(mask[:, :, ::-1])
     return mask
 
 
@@ -70,36 +70,32 @@ def norm(t, dim):
     return torch.sqrt(torch.sum(t * t, dim))
 
 
-class ARConv2d(nn.Conv2d):
+class ARConv1d(nn.Conv1d):
     """Allows for weights as input."""
 
     def __init__(self, C_in, C_out, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False,
-                 masked=False, zero_diag=False, mirror=False):
+                 causal=False, mode= 'SAME'):
         """
         Args:
             use_shared (bool): Use weights for this layer or not?
         """
-        super(ARConv2d, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
-
-        self.masked = masked
-        if self.masked:
-            assert kernel_size % 2 == 1, 'kernel size should be an odd value.'
-            self.mask = torch.from_numpy(create_conv_mask(kernel_size, C_in, groups, C_out, zero_diag, mirror)).cuda()
-            init_mask = self.mask.cpu()
+        super(ARConv1d, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
+        self.causal = causal
+        self.mode = mode
+        if self.causal and self.mode == 'SAME':
+            self.padding = dilation * (kernel_size - 1)
+        elif self.mode == 'SAME':
+            self.padding = dilation * (kernel_size - 1) // 2
         else:
-            self.mask = 1.0
-            init_mask = 1.0
+            self.padding = 0
 
         # init weight normalizaition parameters
-        init = torch.log(norm(self.weight * init_mask, dim=[1, 2, 3]).view(-1, 1, 1, 1) + 1e-2)
+        init = torch.log(norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-2)
         self.log_weight_norm = nn.Parameter(init, requires_grad=True)
         self.weight_normalized = None
 
     def normalize_weight(self):
         weight = self.weight
-        if self.masked:
-            assert self.mask.size() == weight.size()
-            weight = weight * self.mask
 
         # weight normalization
         weight = normalize_weight_jit(self.log_weight_norm, weight)
@@ -113,25 +109,28 @@ class ARConv2d(nn.Conv2d):
         """
         self.weight_normalized = self.normalize_weight()
         bias = self.bias
-        return F.conv2d(x, self.weight_normalized, bias, self.stride,
+        out = F.conv1d(x, self.weight_normalized, bias, self.stride,
                         self.padding, self.dilation, self.groups)
+        if self.causal and self.padding is not 0:
+            out = out[:, :, :-self.padding]
+        return out
 
 
 class ELUConv(nn.Module):
     """ReLU + Conv2d + BN."""
 
-    def __init__(self, C_in, C_out, kernel_size, padding=0, dilation=1, masked=True, zero_diag=True,
-                 weight_init_coeff=1.0, mirror=False):
+    def __init__(self, C_in, C_out, kernel_size, padding=0, dilation=1, causal=False,
+        mode='SAME', weight_init_coeff=1.0):
         super(ELUConv, self).__init__()
-        self.conv_0 = ARConv2d(C_in, C_out, kernel_size, stride=1, padding=padding, bias=True, dilation=dilation,
-                               masked=masked, zero_diag=zero_diag, mirror=mirror)
+        self.conv_0 = ARConv1d(C_in, C_out, kernel_size, stride=1, padding=padding, bias=True, dilation=dilation,
+                              causal = causal, mode = mode)
         # change the initialized log weight norm
         self.conv_0.log_weight_norm.data += np.log(weight_init_coeff)
 
     def forward(self, x):
         """
         Args:
-            x (torch.Tensor): of size (B, C_in, H, W)
+            x (torch.Tensor): of size (B, C_in, H)
         """
         out = F.elu(x)
         out = self.conv_0(out)
@@ -144,10 +143,10 @@ class ARInvertedResidual(nn.Module):
         hidden_dim = int(round(inz * ex))
         padding = dil * (k - 1) // 2
         layers = []
-        layers.extend([ARConv2d(inz, hidden_dim, kernel_size=3, padding=1, masked=True, mirror=mirror, zero_diag=True),
+        layers.extend([ARConv1d(inz, hidden_dim, kernel_size=3, padding=1, causal = causal, mode = mode),
                        nn.ELU(inplace=True)])
-        layers.extend([ARConv2d(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
-                                masked=True, mirror=mirror, zero_diag=False),
+        layers.extend([ARConv1d(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
+                                        self.causal = causal, self.mode = mode),
                       nn.ELU(inplace=True)])
         self.convz = nn.Sequential(*layers)
         self.hidden_dim = hidden_dim
