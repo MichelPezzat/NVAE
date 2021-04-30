@@ -138,7 +138,8 @@ class ELUConv(nn.Module):
 
 
 class ARInvertedResidual(nn.Module):
-    def __init__(self, inz, inf, ex=6, dil=1, k=5, mirror=False):
+    def __init__(self, inz, inf, ex=6, dil=1, k=5, causal=False,
+        mode='SAME'):
         super(ARInvertedResidual, self).__init__()
         hidden_dim = int(round(inz * ex))
         padding = dil * (k - 1) // 2
