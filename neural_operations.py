@@ -254,7 +254,7 @@ class EncCombinerCell(nn.Module):
         super(EncCombinerCell, self).__init__()
         self.cell_type = cell_type
         # Cin = Cin1 + Cin2
-        self.conv = Conv2D(Cin2, Cout, kernel_size=1, stride=1, padding=0, bias=True)
+        self.conv = Conv1D(Cin2, Cout, kernel_size=1, stride=1, padding=0, bias=True)
 
     def forward(self, x1, x2):
         x2 = self.conv(x2)
@@ -267,7 +267,7 @@ class DecCombinerCell(nn.Module):
     def __init__(self, Cin1, Cin2, Cout, cell_type):
         super(DecCombinerCell, self).__init__()
         self.cell_type = cell_type
-        self.conv = Conv2D(Cin1 + Cin2, Cout, kernel_size=1, stride=1, padding=0, bias=True)
+        self.conv = Conv1D(Cin1 + Cin2, Cout, kernel_size=1, stride=1, padding=0, bias=True)
 
     def forward(self, x1, x2):
         out = torch.cat([x1, x2], dim=1)
