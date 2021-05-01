@@ -134,7 +134,7 @@ class AutoEncoder(nn.Module):
         self.num_cell_per_cond_dec = args.num_cell_per_cond_dec  # number of cell for each conditional in decoder
 
         # general cell parameters
-        self.input_size = get_input_size(self.dataset)
+        self.input_size = args.sample_length
 
         # decoder param
         self.num_mix_output = 10
@@ -142,10 +142,9 @@ class AutoEncoder(nn.Module):
         # used for generative purpose
         c_scaling = CHANNEL_MULT ** (self.num_preprocess_blocks + self.num_latent_scales - 1)
         spatial_scaling = 2 ** (self.num_preprocess_blocks + self.num_latent_scales - 1)
-        prior_ftr0_size = (int(c_scaling * self.num_channels_dec), self.input_size // spatial_scaling,
-                           self.input_size // spatial_scaling)
+        prior_ftr0_size = (int(c_scaling * self.num_channels_dec), self.input_size // spatial_scaling)
         self.prior_ftr0 = nn.Parameter(torch.rand(size=prior_ftr0_size), requires_grad=True)
-        self.z0_size = [self.num_latent_per_group, self.input_size // spatial_scaling, self.input_size // spatial_scaling]
+        self.z0_size = [self.num_latent_per_group, self.input_size // spatial_scaling]
 
         self.stem = self.init_stem()
         self.pre_process, mult = self.init_pre_process(mult=1)
@@ -178,10 +177,10 @@ class AutoEncoder(nn.Module):
         self.all_bn_layers = []
         for n, layer in self.named_modules():
             # if isinstance(layer, Conv2D) and '_ops' in n:   # only chose those in cell
-            if isinstance(layer, Conv2D) or isinstance(layer, ARConv2d):
+            if isinstance(layer, Conv1D) or isinstance(layer, ARConv1d):
                 self.all_log_norm.append(layer.log_weight_norm)
                 self.all_conv_layers.append(layer)
-            if isinstance(layer, nn.BatchNorm2d) or isinstance(layer, nn.SyncBatchNorm) or \
+            if isinstance(layer, nn.BatchNorm1d) or isinstance(layer, nn.SyncBatchNorm) or \
                     isinstance(layer, SyncBatchNormSwish):
                 self.all_bn_layers.append(layer)
 
@@ -194,8 +193,7 @@ class AutoEncoder(nn.Module):
 
     def init_stem(self):
         Cout = self.num_channels_enc
-        Cin = 1 if self.dataset == 'mnist' else 3
-        stem = Conv2D(Cin, Cout, 3, padding=1, bias=True)
+        stem = Conv1D(1, Cout, 3, padding=1, bias=True)
         return stem
 
     def init_pre_process(self, mult):
@@ -249,7 +247,7 @@ class AutoEncoder(nn.Module):
         num_c = int(self.num_channels_enc * mult)
         cell = nn.Sequential(
             nn.ELU(),
-            Conv2D(num_c, num_c, kernel_size=1, bias=True),
+            Conv1D(num_c, num_c, kernel_size=1, bias=True),
             nn.ELU())
         return cell
 
@@ -260,7 +258,7 @@ class AutoEncoder(nn.Module):
             for g in range(self.groups_per_scale[self.num_latent_scales - s - 1]):
                 # build mu, sigma generator for encoder
                 num_c = int(self.num_channels_enc * mult)
-                cell = Conv2D(num_c, 2 * self.num_latent_per_group, kernel_size=3, padding=1, bias=True)
+                cell = Conv1D(num_c, 2 * self.num_latent_per_group, kernel_size=3, padding=1, bias=True)
                 enc_sampler.append(cell)
                 # build NF
                 for n in range(self.num_flows):
@@ -272,7 +270,7 @@ class AutoEncoder(nn.Module):
                     num_c = int(self.num_channels_dec * mult)
                     cell = nn.Sequential(
                         nn.ELU(),
-                        Conv2D(num_c, 2 * self.num_latent_per_group, kernel_size=1, padding=0, bias=True))
+                        Conv1D(num_c, 2 * self.num_latent_per_group, kernel_size=1, padding=0, bias=True))
                     dec_sampler.append(cell)
 
             mult = mult / CHANNEL_MULT
