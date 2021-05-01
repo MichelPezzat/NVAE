@@ -378,7 +378,7 @@ class AutoEncoder(nn.Module):
         idx_dec = 0
         s = self.prior_ftr0.unsqueeze(0)
         batch_size = z.size(0)
-        s = s.expand(batch_size, -1, -1, -1)
+        s = s.expand(batch_size, -1, -1)
         for cell in self.dec_tower:
             if cell.cell_type == 'combiner_dec':
                 if idx_dec > 0:
@@ -431,10 +431,10 @@ class AutoEncoder(nn.Module):
             else:
                 kl_per_var = q.kl(p)
 
-            kl_diag.append(torch.mean(torch.sum(kl_per_var, dim=[2, 3]), dim=0))
-            kl_all.append(torch.sum(kl_per_var, dim=[1, 2, 3]))
-            log_q += torch.sum(log_q_conv, dim=[1, 2, 3])
-            log_p += torch.sum(log_p_conv, dim=[1, 2, 3])
+            kl_diag.append(torch.mean(torch.sum(kl_per_var, dim=2), dim=0))
+            kl_all.append(torch.sum(kl_per_var, dim=[1, 2]))
+            log_q += torch.sum(log_q_conv, dim=[1, 2])
+            log_p += torch.sum(log_p_conv, dim=[1, 2])
 
         return logits, log_q, log_p, kl_all, kl_diag
 
