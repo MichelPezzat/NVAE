@@ -338,9 +338,12 @@ class AutoEncoder(nn.Module):
 
     def forward(self, x, global_step, args):
         
-        x_in = self.preprocess(x)
-        
         metrics = {}
+        
+        alpha_i = utils.kl_balancer_coeff(num_scales=self.num_latent_scales,
+                                      groups_per_scale=self.groups_per_scale, fun='square')
+        
+        x_in = self.preprocess(x)
         
         s = self.stem(2 * x_in - 1.0)
 
