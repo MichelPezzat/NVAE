@@ -15,7 +15,7 @@ from neural_operations import OPS, EncCombinerCell, DecCombinerCell, Conv2D, get
 from neural_ar_operations import ARConv2d, ARInvertedResidual, MixLogCDFParam, mix_log_cdf_flow
 from neural_ar_operations import ELUConv as ARELUConv
 from torch.distributions.bernoulli import Bernoulli
-
+import utils
 from utils import get_stride_for_cell_type, get_input_size, groups_per_scale
 from distributions import Normal, DiscMixLogistic
 from thirdparty.inplaced_sync_batchnorm import SyncBatchNormSwish
@@ -111,6 +111,8 @@ class AutoEncoder(nn.Module):
         self.use_se = args.use_se
         self.res_dist = args.res_dist
         self.num_bits = args.num_x_bits
+        self.spectral = args.spectral
+        self.multispectral = args.multispectral
 
         self.num_latent_scales = args.num_latent_scales         # number of spatial scales that latent layers will reside
         self.num_groups_per_scale = args.num_groups_per_scale   # number of groups of latent vars. per scale
@@ -327,9 +329,18 @@ class AutoEncoder(nn.Module):
         C_out = 1 if self.dataset == 'mnist' else 10 * self.num_mix_output
         return nn.Sequential(nn.ELU(),
                              Conv2D(C_in, C_out, 3, padding=1, bias=True))
+    
+    def preprocess(self, x):
+        # x: NTC [-1,1] -> NCT [-1,1]
+        assert len(x.shape) == 3
+        x = x.permute(0,2,1).float()
+        return x
 
-    def forward(self, x):
-        s = self.stem(2 * x - 1.0)
+    def forward(self, x, global_step, args):
+        
+        x_in = self.preprocess(x)
+        
+        s = self.stem(2 * x_in - 1.0)
 
         # perform pre-processing
         for cell in self.pre_process:
@@ -435,8 +446,50 @@ class AutoEncoder(nn.Module):
             kl_all.append(torch.sum(kl_per_var, dim=[1, 2]))
             log_q += torch.sum(log_q_conv, dim=[1, 2])
             log_p += torch.sum(log_p_conv, dim=[1, 2])
+        
+        output = self.decoder_output(logits)
+        
+        def _spectral_loss(x_target, x_out, args):
+            if hps.use_nonrelative_specloss:
+                sl = spectral_loss(x_target, x_out, args) / args.bandwidth['spec']
+            else:
+                sl = spectral_convergence(x_target, x_out, args)
+            sl = t.mean(sl)
+            return sl
 
-        return logits, log_q, log_p, kl_all, kl_diag
+        def _multispectral_loss(x_target, x_out, args):
+            sl = multispectral_loss(x_target, x_out, args) / args.bandwidth['spec']
+            sl = t.mean(sl)
+            return sl
+        
+        
+        
+        kl_coeff = utils.kl_coeff(global_step, args.kl_anneal_portion * args.num_total_iter,
+                                      args.kl_const_portion * args.num_total_iter, args.kl_const_coeff)
+        recon_loss = utils.reconstruction_loss(output, x, crop=self.crop_output)
+        balanced_kl, kl_coeffs, kl_vals = utils.kl_balancer(kl_all, kl_coeff, kl_balance=True, alpha_i=alpha_i)
+        
+        nelbo_batch = recon_loss + balanced_kl
+        loss = torch.mean(nelbo_batch)
+        
+        bn_loss = self.batchnorm_loss()
+        
+        x_target = audio_postprocess(x.float(), args)
+        x_out = audio_postprocess(output, args)
+        
+        spec_loss = _spectral_loss(x_target, x_out, args)
+        multispec_loss = _multispectral_loss(x_target, x_out, args)
+        
+        if args.weight_decay_norm_anneal:
+            assert args.weight_decay_norm_init > 0 and args.weight_decay_norm > 0, 'init and final wdn should be positive.'
+            wdn_coeff = (1. - kl_coeff) * np.log(args.weight_decay_norm_init) + kl_coeff * np.log(args.weight_decay_norm)
+            wdn_coeff = np.exp(wdn_coeff)
+        else:
+            wdn_coeff = args.weight_decay_norm
+
+        loss += bn_loss * wdn_coeff + self.spectral * spec_loss + self.multispectral * multispec_loss
+
+        return loss, log_q, log_p, kl_all, kl_diag
 
     def sample(self, num_samples, t):
         scale_ind = 0
@@ -447,7 +500,7 @@ class AutoEncoder(nn.Module):
         idx_dec = 0
         s = self.prior_ftr0.unsqueeze(0)
         batch_size = z.size(0)
-        s = s.expand(batch_size, -1, -1, -1)
+        s = s.expand(batch_size, -1, -1)
         for cell in self.dec_tower:
             if cell.cell_type == 'combiner_dec':
                 if idx_dec > 0:
@@ -475,13 +528,9 @@ class AutoEncoder(nn.Module):
         return logits
 
     def decoder_output(self, logits):
-        if self.dataset == 'mnist':
-            return Bernoulli(logits=logits)
-        elif self.dataset in {'cifar10', 'celeba_64', 'celeba_256', 'imagenet_32', 'imagenet_64', 'ffhq',
-                              'lsun_bedroom_128', 'lsun_bedroom_256'}:
-            return DiscMixLogistic(logits, self.num_mix_output, num_bits=self.num_bits)
-        else:
-            raise NotImplementedError
+
+        return DiscMixLogistic(logits, self.num_mix_output, num_bits=self.num_bits)
+
 
     def spectral_norm_parallel(self):
         """ This method computes spectral normalization for all conv layers in parallel. This method should be called
