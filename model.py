@@ -340,6 +340,8 @@ class AutoEncoder(nn.Module):
         
         x_in = self.preprocess(x)
         
+        metrics = {}
+        
         s = self.stem(2 * x_in - 1.0)
 
         # perform pre-processing
@@ -488,8 +490,25 @@ class AutoEncoder(nn.Module):
             wdn_coeff = args.weight_decay_norm
 
         loss += bn_loss * wdn_coeff + self.spectral * spec_loss + self.multispectral * multispec_loss
+        
+        with t.no_grad():
+            sc = t.mean(spectral_convergence(x_target, x_out, args))
+        
+        metrics.update(dict(
+            recon_loss=recon_loss,
+            spectral_loss=spec_loss,
+            multispectral_loss=multispec_loss,
+            spectral_convergence=sc,
+            bn_loss =bn_loss,
+            wdn_coeff=wdn_coeff,
+            kl_all=torch.mean(sum(kl_all)),
+            kl_coeff= kl_coeff
+            ))
+        
+        for key, val in metrics.items():
+            metrics[key] = val.detach()
 
-        return loss, log_q, log_p, kl_all, kl_diag
+        return x_out, loss, metrics
 
     def sample(self, num_samples, t):
         scale_ind = 0
