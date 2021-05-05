@@ -97,13 +97,12 @@ class DiscLogistic:
 
 class DiscMixLogistic:
     def __init__(self, param, num_mix=10, num_bits=8):
-        B, C, H, W = param.size()
+        B, C, H = param.size()
         self.num_mix = num_mix
-        self.logit_probs = param[:, :num_mix, :, :]                                   # B, M, H, W
-        l = param[:, num_mix:, :, :].view(B, 3, 3 * num_mix, H, W)                    # B, 3, 3 * M, H, W
+        self.logit_probs = param[:, :num_mix, :]                                   # B, M, H, W
+        l = param[:, num_mix:, :, :].view(B, 1, 2 * num_mix, H)                    # B, 3, 3 * M, H, W
         self.means = l[:, :, :num_mix, :, :]                                          # B, 3, M, H, W
-        self.log_scales = torch.clamp(l[:, :, num_mix:2 * num_mix, :, :], min=-7.0)   # B, 3, M, H, W
-        self.coeffs = torch.tanh(l[:, :, 2 * num_mix:3 * num_mix, :, :])              # B, 3, M, H, W
+        self.log_scales = torch.clamp(l[:, :, num_mix:2 * num_mix, :], min=-7.0)   # B, 3, M, H, W
         self.max_val = 2. ** num_bits - 1
 
     def log_prob(self, samples):
@@ -111,22 +110,12 @@ class DiscMixLogistic:
         # convert samples to be in [-1, 1]
         samples = 2 * samples - 1.0
 
-        B, C, H, W = samples.size()
-        assert C == 3, 'only RGB images are considered.'
+        B, C, H = samples.size()
+        assert C == 1, 'only RGB images are considered.'
 
         samples = samples.unsqueeze(4)                                                  # B, 3, H , W
-        samples = samples.expand(-1, -1, -1, -1, self.num_mix).permute(0, 1, 4, 2, 3)   # B, 3, M, H, W
-        mean1 = self.means[:, 0, :, :, :]                                               # B, M, H, W
-        mean2 = self.means[:, 1, :, :, :] + \
-                self.coeffs[:, 0, :, :, :] * samples[:, 0, :, :, :]                     # B, M, H, W
-        mean3 = self.means[:, 2, :, :, :] + \
-                self.coeffs[:, 1, :, :, :] * samples[:, 0, :, :, :] + \
-                self.coeffs[:, 2, :, :, :] * samples[:, 1, :, :, :]                     # B, M, H, W
+        samples = samples.expand(-1, -1, -1, self.num_mix).permute(0, 1, 3, 2)   # B, 3, M, H, W
 
-        mean1 = mean1.unsqueeze(1)                          # B, 1, M, H, W
-        mean2 = mean2.unsqueeze(1)                          # B, 1, M, H, W
-        mean3 = mean3.unsqueeze(1)                          # B, 1, M, H, W
-        means = torch.cat([mean1, mean2, mean3], dim=1)     # B, 3, M, H, W
         centered = samples - means                          # B, 3, M, H, W
 
         inv_stdv = torch.exp(- self.log_scales)
@@ -166,15 +155,8 @@ class DiscMixLogistic:
         u = torch.Tensor(means.size()).uniform_(1e-5, 1. - 1e-5).cuda()                        # B, 3, H, W
         x = means + torch.exp(log_scales) / t * (torch.log(u) - torch.log(1. - u))             # B, 3, H, W
 
-        x0 = torch.clamp(x[:, 0, :, :], -1, 1.)                                                # B, H, W
-        x1 = torch.clamp(x[:, 1, :, :] + coeffs[:, 0, :, :] * x0, -1, 1)                       # B, H, W
-        x2 = torch.clamp(x[:, 2, :, :] + coeffs[:, 1, :, :] * x0 + coeffs[:, 2, :, :] * x1, -1, 1)  # B, H, W
+        x0 = torch.clamp(x[:, 0, :], -1, 1.)                                                # B, H, W
 
-        x0 = x0.unsqueeze(1)
-        x1 = x1.unsqueeze(1)
-        x2 = x2.unsqueeze(1)
-
-        x = torch.cat([x0, x1, x2], 1)
         x = x / 2. + 0.5
         return x
 
