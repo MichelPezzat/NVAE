@@ -17,6 +17,7 @@ from neural_ar_operations import ELUConv as ARELUConv
 from torch.distributions.bernoulli import Bernoulli
 import utils
 from utils import get_stride_for_cell_type, get_input_size, groups_per_scale
+from audio_utils import spectral_convergence, spectral_loss, multispectral_loss, audio_postprocess
 from distributions import Normal, DiscMixLogistic
 from thirdparty.inplaced_sync_batchnorm import SyncBatchNormSwish
 
@@ -480,7 +481,7 @@ class AutoEncoder(nn.Module):
         bn_loss = self.batchnorm_loss()
         
         x_target = audio_postprocess(x.float(), args)
-        x_out = audio_postprocess(output, args)
+        x_out = audio_postprocess(output.sample(), args)
         
         spec_loss = _spectral_loss(x_target, x_out, args)
         multispec_loss = _multispectral_loss(x_target, x_out, args)
@@ -547,7 +548,8 @@ class AutoEncoder(nn.Module):
             s = cell(s)
 
         logits = self.image_conditional(s)
-        return logits
+        output = self.decoder_output(logits).sample()
+        return output
 
     def decoder_output(self, logits):
 
