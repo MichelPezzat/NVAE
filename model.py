@@ -455,6 +455,7 @@ class AutoEncoder(nn.Module):
         
         output = self.decoder_output(logits)
         
+        """
         def _spectral_loss(x_target, x_out, args):
             if hps.use_nonrelative_specloss:
                 sl = spectral_loss(x_target, x_out, args) / args.bandwidth['spec']
@@ -467,7 +468,7 @@ class AutoEncoder(nn.Module):
             sl = multispectral_loss(x_target, x_out, args) / args.bandwidth['spec']
             sl = t.mean(sl)
             return sl
-        
+        """
         
         
         kl_coeff = utils.kl_coeff(global_step, args.kl_anneal_portion * args.num_total_iter,
@@ -479,12 +480,13 @@ class AutoEncoder(nn.Module):
         loss = torch.mean(nelbo_batch)
         
         bn_loss = self.batchnorm_loss()
+        norm_loss = self.spectral_norm_parallel()
         
-        x_target = audio_postprocess(x.float(), args)
+        #x_target = audio_postprocess(x.float(), args)
         x_out = audio_postprocess(output.sample(), args)
         
-        spec_loss = _spectral_loss(x_target, x_out, args)
-        multispec_loss = _multispectral_loss(x_target, x_out, args)
+        #spec_loss = _spectral_loss(x_target, x_out, args)
+        #multispec_loss = _multispectral_loss(x_target, x_out, args)
         
         if args.weight_decay_norm_anneal:
             assert args.weight_decay_norm_init > 0 and args.weight_decay_norm > 0, 'init and final wdn should be positive.'
@@ -493,17 +495,13 @@ class AutoEncoder(nn.Module):
         else:
             wdn_coeff = args.weight_decay_norm
 
-        loss += bn_loss * wdn_coeff + self.spectral * spec_loss + self.multispectral * multispec_loss
+        loss += bn_loss * wdn_coeff + norm_loss * wdn_coeff 
         
-        with t.no_grad():
-            sc = t.mean(spectral_convergence(x_target, x_out, args))
         
         metrics.update(dict(
             recon_loss=recon_loss,
-            spectral_loss=spec_loss,
-            multispectral_loss=multispec_loss,
-            spectral_convergence=sc,
             bn_loss =bn_loss,
+            norm_loss=norm_loss,
             wdn_coeff=wdn_coeff,
             kl_all=torch.mean(sum(kl_all)),
             kl_coeff= kl_coeff
