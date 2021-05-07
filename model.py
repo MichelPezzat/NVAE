@@ -25,7 +25,7 @@ CHANNEL_MULT = 2
 
 
 class Cell(nn.Module):
-    def __init__(self, Cin, Cout, cell_type, arch, use_se,checkpoint_res):
+    def __init__(self, Cin, Cout, cell_type, arch, use_se,checkpoint_res=False):
         super(Cell, self).__init__()
         self.cell_type = cell_type
 
@@ -56,7 +56,7 @@ class Cell(nn.Module):
 
 
 class CellAR(nn.Module):
-    def __init__(self, num_z, num_ftr, num_c, arch, mirror):
+    def __init__(self, num_z, num_ftr, num_c, arch, mirror,checkpoint_res=False):
         super(CellAR, self).__init__()
         assert num_c % num_z == 0
 
@@ -64,7 +64,7 @@ class CellAR(nn.Module):
 
         # s0 will the random samples
         ex = 6
-        self.conv = ARInvertedResidual(num_z, num_ftr, ex=ex, mirror=mirror)
+        self.conv = ARInvertedResidual(num_z, num_ftr, ex=ex, mirror=mirror,checkpoint_res)
 
         self.use_mix_log_cdf = False
         if self.use_mix_log_cdf:
@@ -72,7 +72,7 @@ class CellAR(nn.Module):
         else:
             # 0.1 helps bring mu closer to 0 initially
             self.mu = ARELUConv(self.conv.hidden_dim, num_z, kernel_size=1, padding=0, masked=True, zero_diag=False,
-                                weight_init_coeff=0.1, mirror=mirror)
+                                weight_init_coeff=0.1, mirror=mirror,checkpoint_res)
 
     def forward(self, z, ftr):
         s = self.conv(z, ftr)
@@ -89,10 +89,10 @@ class CellAR(nn.Module):
 
 
 class PairedCellAR(nn.Module):
-    def __init__(self, num_z, num_ftr, num_c, arch=None):
+    def __init__(self, num_z, num_ftr, num_c, arch=None,checkpoint_res=False):
         super(PairedCellAR, self).__init__()
-        self.cell1 = CellAR(num_z, num_ftr, num_c, arch, mirror=False)
-        self.cell2 = CellAR(num_z, num_ftr, num_c, arch, mirror=True)
+        self.cell1 = CellAR(num_z, num_ftr, num_c, arch, mirror=False,checkpoint_res)
+        self.cell2 = CellAR(num_z, num_ftr, num_c, arch, mirror=True,checkpoint_res)
 
     def forward(self, z, ftr):
         new_z, log_det1 = self.cell1(z, ftr)
@@ -269,7 +269,7 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['ar_nn']
                     num_c1 = int(self.num_channels_enc * mult)
                     num_c2 = 8 * self.num_latent_per_group  # use 8x features
-                    nf_cells.append(PairedCellAR(self.num_latent_per_group, num_c1, num_c2, arch))
+                    nf_cells.append(PairedCellAR(self.num_latent_per_group, num_c1, num_c2, arch, self.checkpoint_res))
                 if not (s == 0 and g == 0):  # for the first group, we use a fixed standard Normal.
                     num_c = int(self.num_channels_dec * mult)
                     cell = nn.Sequential(
