@@ -11,8 +11,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from neural_operations import OPS, EncCombinerCell, DecCombinerCell, Conv2D, get_skip_connection, SE
-from neural_ar_operations import ARConv2d, ARInvertedResidual, MixLogCDFParam, mix_log_cdf_flow
+from neural_operations import OPS, EncCombinerCell, DecCombinerCell, Conv1D, get_skip_connection, SE
+from neural_ar_operations import ARConv1d, ARInvertedResidual, MixLogCDFParam, mix_log_cdf_flow
 from neural_ar_operations import ELUConv as ARELUConv
 from torch.distributions.bernoulli import Bernoulli
 import utils
@@ -339,6 +339,9 @@ class AutoEncoder(nn.Module):
         return x
 
     def forward(self, x, global_step, args):
+        
+        if args.fp16:
+            x = x.half()
         
         metrics = {}
         
