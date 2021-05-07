@@ -15,6 +15,8 @@ from thirdparty.inplaced_sync_batchnorm import SyncBatchNormSwish
 from utils import average_tensor
 from collections import OrderedDict
 from thirdparty.checkpoint import checkpoint
+import thirdparty.dist_adapter as dist
+
 
 BN_EPS = 1e-5
 SYNC_BN = True
