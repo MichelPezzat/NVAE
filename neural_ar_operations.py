@@ -13,6 +13,7 @@ import numpy as np
 from collections import OrderedDict
 
 from neural_operations import ConvBNSwish, normalize_weight_jit
+import thirdparty.dist_adapter as dist
 
 AROPS = OrderedDict([
     ('conv_3x3', lambda C, masked, zero_diag: ELUConv(C, C, 3, 1, 1, masked=masked, zero_diag=zero_diag))
