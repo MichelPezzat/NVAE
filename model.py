@@ -56,7 +56,7 @@ class Cell(nn.Module):
 
 
 class CellAR(nn.Module):
-    def __init__(self, num_z, num_ftr, num_c, arch, mirror,checkpoint_res=False):
+    def __init__(self, num_z, num_ftr, num_c, arch, checkpoint_res=False):
         super(CellAR, self).__init__()
         assert num_c % num_z == 0
 
@@ -64,15 +64,15 @@ class CellAR(nn.Module):
 
         # s0 will the random samples
         ex = 6
-        self.conv = ARInvertedResidual(num_z, num_ftr, ex=ex, mirror=mirror,checkpoint_res)
+        self.conv = ARInvertedResidual(num_z, num_ftr, ex=ex, checkpoint_res)
 
         self.use_mix_log_cdf = False
         if self.use_mix_log_cdf:
-            self.param = MixLogCDFParam(num_z, num_mix=3, num_ftr=self.conv.hidden_dim, mirror=mirror)
+            self.param = MixLogCDFParam(num_z, num_mix=3, num_ftr=self.conv.hidden_dim)
         else:
             # 0.1 helps bring mu closer to 0 initially
             self.mu = ARELUConv(self.conv.hidden_dim, num_z, kernel_size=1, padding=0, masked=True, zero_diag=False,
-                                weight_init_coeff=0.1, mirror=mirror,checkpoint_res)
+                                weight_init_coeff=0.1, checkpoint_res)
 
     def forward(self, z, ftr):
         s = self.conv(z, ftr)
@@ -91,8 +91,8 @@ class CellAR(nn.Module):
 class PairedCellAR(nn.Module):
     def __init__(self, num_z, num_ftr, num_c, arch=None,checkpoint_res=False):
         super(PairedCellAR, self).__init__()
-        self.cell1 = CellAR(num_z, num_ftr, num_c, arch, mirror=False,checkpoint_res)
-        self.cell2 = CellAR(num_z, num_ftr, num_c, arch, mirror=True,checkpoint_res)
+        self.cell1 = CellAR(num_z, num_ftr, num_c, arch, checkpoint_res)
+        self.cell2 = CellAR(num_z, num_ftr, num_c, arch, checkpoint_res)
 
     def forward(self, z, ftr):
         new_z, log_det1 = self.cell1(z, ftr)
