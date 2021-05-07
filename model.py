@@ -25,7 +25,7 @@ CHANNEL_MULT = 2
 
 
 class Cell(nn.Module):
-    def __init__(self, Cin, Cout, cell_type, arch, use_se):
+    def __init__(self, Cin, Cout, cell_type, arch, use_se,checkpoint_res):
         super(Cell, self).__init__()
         self.cell_type = cell_type
 
@@ -38,7 +38,7 @@ class Cell(nn.Module):
             stride = get_stride_for_cell_type(self.cell_type) if i == 0 else 1
             C = Cin if i == 0 else Cout
             primitive = arch[i]
-            op = OPS[primitive](C, Cout, stride)
+            op = OPS[primitive](C, Cout, stride,checkpoint_res)
             self._ops.append(op)
 
         # SE
@@ -112,8 +112,9 @@ class AutoEncoder(nn.Module):
         self.use_se = args.use_se
         self.res_dist = args.res_dist
         self.num_bits = args.num_x_bits
-        self.spectral = args.spectral
-        self.multispectral = args.multispectral
+        self.checkpoint_res = args.checkpoint_res
+        #self.spectral = args.spectral
+        #self.multispectral = args.multispectral
 
         self.num_latent_scales = args.num_latent_scales         # number of spatial scales that latent layers will reside
         self.num_groups_per_scale = args.num_groups_per_scale   # number of groups of latent vars. per scale
@@ -207,12 +208,12 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['down_pre']
                     num_ci = int(self.num_channels_enc * mult)
                     num_co = int(CHANNEL_MULT * num_ci)
-                    cell = Cell(num_ci, num_co, cell_type='down_pre', arch=arch, use_se=self.use_se)
+                    cell = Cell(num_ci, num_co, cell_type='down_pre', arch=arch, use_se=self.use_se, self.checkpoint_res)
                     mult = CHANNEL_MULT * mult
                 else:
                     arch = self.arch_instance['normal_pre']
                     num_c = self.num_channels_enc * mult
-                    cell = Cell(num_c, num_c, cell_type='normal_pre', arch=arch, use_se=self.use_se)
+                    cell = Cell(num_c, num_c, cell_type='normal_pre', arch=arch, use_se=self.use_se, self.checkpoint_res)
 
                 pre_process.append(cell)
 
@@ -225,7 +226,7 @@ class AutoEncoder(nn.Module):
                 for c in range(self.num_cell_per_cond_enc):
                     arch = self.arch_instance['normal_enc']
                     num_c = int(self.num_channels_enc * mult)
-                    cell = Cell(num_c, num_c, cell_type='normal_enc', arch=arch, use_se=self.use_se)
+                    cell = Cell(num_c, num_c, cell_type='normal_enc', arch=arch, use_se=self.use_se,self.checkpoint_res = checkpoint_res)
                     enc_tower.append(cell)
 
                 # add encoder combiner
@@ -240,7 +241,7 @@ class AutoEncoder(nn.Module):
                 arch = self.arch_instance['down_enc']
                 num_ci = int(self.num_channels_enc * mult)
                 num_co = int(CHANNEL_MULT * num_ci)
-                cell = Cell(num_ci, num_co, cell_type='down_enc', arch=arch, use_se=self.use_se)
+                cell = Cell(num_ci, num_co, cell_type='down_enc', arch=arch, use_se=self.use_se, self.checkpoint_res = checkpoint_res)
                 enc_tower.append(cell)
                 mult = CHANNEL_MULT * mult
 
@@ -289,7 +290,7 @@ class AutoEncoder(nn.Module):
                 if not (s == 0 and g == 0):
                     for c in range(self.num_cell_per_cond_dec):
                         arch = self.arch_instance['normal_dec']
-                        cell = Cell(num_c, num_c, cell_type='normal_dec', arch=arch, use_se=self.use_se)
+                        cell = Cell(num_c, num_c, cell_type='normal_dec', arch=arch, use_se=self.use_se, self.checkpoint_res = checkpoint_res)
                         dec_tower.append(cell)
 
                 cell = DecCombinerCell(num_c, self.num_latent_per_group, num_c, cell_type='combiner_dec')
@@ -300,7 +301,7 @@ class AutoEncoder(nn.Module):
                 arch = self.arch_instance['up_dec']
                 num_ci = int(self.num_channels_dec * mult)
                 num_co = int(num_ci / CHANNEL_MULT)
-                cell = Cell(num_ci, num_co, cell_type='up_dec', arch=arch, use_se=self.use_se)
+                cell = Cell(num_ci, num_co, cell_type='up_dec', arch=arch, use_se=self.use_se, self.checkpoint_res = checkpoint_res)
                 dec_tower.append(cell)
                 mult = mult / CHANNEL_MULT
 
@@ -314,12 +315,12 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['up_post']
                     num_ci = int(self.num_channels_dec * mult)
                     num_co = int(num_ci / CHANNEL_MULT)
-                    cell = Cell(num_ci, num_co, cell_type='up_post', arch=arch, use_se=self.use_se)
+                    cell = Cell(num_ci, num_co, cell_type='up_post', arch=arch, use_se=self.use_se, self.checkpoint_res = checkpoint_res)
                     mult = mult / CHANNEL_MULT
                 else:
                     arch = self.arch_instance['normal_post']
                     num_c = int(self.num_channels_dec * mult)
-                    cell = Cell(num_c, num_c, cell_type='normal_post', arch=arch, use_se=self.use_se)
+                    cell = Cell(num_c, num_c, cell_type='normal_post', arch=arch, use_se=self.use_se, self.checkpoint_res = checkpoint_res)
 
                 post_process.append(cell)
 
