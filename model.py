@@ -103,12 +103,12 @@ class PairedCellAR(nn.Module):
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, args, writer, arch_instance):
+    def __init__(self, args, arch_instance):
         super(AutoEncoder, self).__init__()
-        self.writer = writer
+        #self.writer = writer
         self.arch_instance = arch_instance
-        self.dataset = args.dataset
-        self.crop_output = self.dataset == 'mnist'
+        #self.dataset = args.dataset
+        #self.crop_output = self.dataset == 'mnist'
         self.use_se = args.use_se
         self.res_dist = args.res_dist
         self.num_bits = args.num_x_bits
@@ -328,9 +328,9 @@ class AutoEncoder(nn.Module):
 
     def init_image_conditional(self, mult):
         C_in = int(self.num_channels_dec * mult)
-        C_out = 1 if self.dataset == 'mnist' else 10 * self.num_mix_output
+        C_out = 10 * self.num_mix_output
         return nn.Sequential(nn.ELU(),
-                             Conv2D(C_in, C_out, 3, padding=1, bias=True))
+                             Conv1D(C_in, C_out, 3, padding=1, bias=True))
     
     def preprocess(self, x):
         # x: NTC [-1,1] -> NCT [-1,1]
