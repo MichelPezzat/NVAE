@@ -340,7 +340,7 @@ class InvertedResidual(nn.Module):
         layers0 = [nn.Upsampling1d(scale_factor=2)] if self.upsample else []
         layers = [get_batchnorm(Cin, eps=BN_EPS, momentum=0.05),
                   ConvBNSwish(Cin, hidden_dim, k=1, checkpoint_res),
-                  ConvBNSwish(hidden_dim, hidden_dim, stride=self.stride, groups=groups, k=k, dilation=dil, checkpoint_res),
+                  ConvBNSwish(hidden_dim, hidden_dim, stride=self.stride, groups=groups, k=k, dilation=dil, checkpoint_res=checkpoint_res),
                   Conv1D(hidden_dim, Cout, 1, 1, 0, bias=False, weight_norm=False),
                   get_batchnorm(Cout, momentum=0.05)]
 
