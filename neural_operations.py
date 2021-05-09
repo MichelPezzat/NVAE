@@ -287,7 +287,7 @@ class DecCombinerCell(nn.Module):
 
 
 class ConvBNSwish(nn.Module):
-    def __init__(self, Cin, Cout, k=3, stride=1, groups=1, dilation=1,checkpoint_res=False)):
+    def __init__(self, Cin, Cout, k=3, stride=1, groups=1, dilation=1,checkpoint_res=False):
         padding = dilation * (k - 1) // 2
         super(ConvBNSwish, self).__init__()
        
