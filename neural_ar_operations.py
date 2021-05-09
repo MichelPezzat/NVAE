@@ -155,7 +155,7 @@ class ARInvertedResidual(nn.Module):
         layers.extend([ARConv1d(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
                                         self.causal = causal, self.mode = mode),
                       nn.ELU(inplace=True)])
-       self.checkpoint_res = checkpoint_res
+        self.checkpoint_res = checkpoint_res
         if self.checkpoint_res == 1:
             if dist.get_rank() == 0:
                 print("Checkpointing convs")
