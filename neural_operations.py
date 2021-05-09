@@ -25,7 +25,7 @@ OPS = OrderedDict([
     ('res_elu', lambda Cin, Cout, stride,checkpoint_res: ELUConv(Cin, Cout, 3, stride, 1,checkpoint_res)),
     ('res_bnelu', lambda Cin, Cout, stride,checkpoint_res: BNELUConv(Cin, Cout, 3, stride, 1,checkpoint_res)),
     ('res_bnswish', lambda Cin, Cout, stride,checkpoint_res: BNSwishConv(Cin, Cout, 3, stride, 1,checkpoint_res)),
-    ('res_bnswish5', lambda Cin, Cout, stride,checkpoint_res: BNSwishConv(Cin, Cout, 3, stride, 2, 2.checkpoint_res)),
+    ('res_bnswish5', lambda Cin, Cout, stride,checkpoint_res: BNSwishConv(Cin, Cout, 3, stride, 2, 2,checkpoint_res)),
     ('mconv_e6k5g0', lambda Cin, Cout, stride,checkpoint_res: InvertedResidual(Cin, Cout, stride, ex=6, dil=1, k=5, g=0,checkpoint_res)),
     ('mconv_e3k5g0', lambda Cin, Cout, stride,checkpoint_res: InvertedResidual(Cin, Cout, stride, ex=3, dil=1, k=5, g=0,checkpoint_res)),
     ('mconv_e3k5g8', lambda Cin, Cout, stride,checkpoint_res: InvertedResidual(Cin, Cout, stride, ex=3, dil=1, k=5, g=8,checkpoint_res)),
