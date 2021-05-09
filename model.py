@@ -208,12 +208,12 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['down_pre']
                     num_ci = int(self.num_channels_enc * mult)
                     num_co = int(CHANNEL_MULT * num_ci)
-                    cell = Cell(num_ci, num_co, cell_type='down_pre', arch=arch, use_se=self.use_se, self.checkpoint_res)
+                    cell = Cell(num_ci, num_co, cell_type='down_pre', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
                     mult = CHANNEL_MULT * mult
                 else:
                     arch = self.arch_instance['normal_pre']
                     num_c = self.num_channels_enc * mult
-                    cell = Cell(num_c, num_c, cell_type='normal_pre', arch=arch, use_se=self.use_se, self.checkpoint_res)
+                    cell = Cell(num_c, num_c, cell_type='normal_pre', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
 
                 pre_process.append(cell)
 
