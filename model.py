@@ -109,7 +109,7 @@ class AutoEncoder(nn.Module):
         self.arch_instance = arch_instance
         #self.dataset = args.dataset
         #self.crop_output = self.dataset == 'mnist'
-        self.use_se = args.use_se
+        self.use_se = args['use_se']
         self.res_dist = args.res_dist
         self.num_bits = args.num_x_bits
         self.checkpoint_res = args.checkpoint_res
