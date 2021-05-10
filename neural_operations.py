@@ -236,8 +236,8 @@ class FactorizedReduce(nn.Module):
     def __init__(self, C_in, C_out):
         super(FactorizedReduce, self).__init__()
         assert C_out % 2 == 0
-        self.conv_1 = Conv1D(C_in, C_out // 4, 1, stride=2, padding=0, bias=True)
-        self.conv_2 = Conv1D(C_in, C_out - (C_out // 4), 1, stride=2, padding=0, bias=True)
+        self.conv_1 = Conv1D(C_in, C_out // 2, 1, stride=2, padding=0, bias=True)
+        self.conv_2 = Conv1D(C_in, C_out - (C_out // 2), 1, stride=2, padding=0, bias=True)
 
     def forward(self, x):
         out = act(x)
