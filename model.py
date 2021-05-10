@@ -104,6 +104,7 @@ class PairedCellAR(nn.Module):
 
 class AutoEncoder(nn.Module):
     def __init__(self, sample_length,num_nf, num_latent_scales, num_groups_per_scale,
+                num_cell_per_cond_enc,num_cell_per_cond_dec,
                 num_latent_per_group, min_groups_per_scale,
                 num_channels_enc, num_preprocess_blocks,
                 num_preprocess_cells, num_channels_dec,
