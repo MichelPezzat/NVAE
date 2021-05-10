@@ -108,8 +108,9 @@ class AutoEncoder(nn.Module):
                 num_latent_per_group, min_groups_per_scale,
                 num_channels_enc, num_preprocess_blocks,
                 num_preprocess_cells, num_channels_dec,
-                num_postprocess_cells, use_se, res_dist,
-                ada_groups,checkpoint_res,num_x_bits,arch_instance):
+                num_postprocess_cells, num_postprocess_blocks,
+                use_se, res_dist,ada_groups,checkpoint_res,
+                num_x_bits,arch_instance):
         super(AutoEncoder, self).__init__()
         #self.writer = writer
         self.arch_instance = arch_instance
