@@ -39,7 +39,7 @@ def get_skip_connection(C, stride, affine, channel_mult):
     elif stride == 2:
         return FactorizedReduce(C, int(channel_mult * C))
     elif stride == -1:
-        return nn.Sequential(UpSample(), Conv2D(C, int(C / channel_mult), kernel_size=1))
+        return nn.Sequential(UpSample(), Conv1D(C, int(C / channel_mult), kernel_size=1))
 
 
 def norm(t, dim):
