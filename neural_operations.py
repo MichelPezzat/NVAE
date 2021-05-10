@@ -75,8 +75,8 @@ class Swish(nn.Module):
 @torch.jit.script
 def normalize_weight_jit(log_weight_norm, weight):
     n = torch.exp(log_weight_norm)
-    wn = torch.sqrt(torch.sum(weight * weight, dim=[1, 2, 3]))   # norm(w)
-    weight = n * weight / (wn.view(-1, 1, 1, 1) + 1e-5)
+    wn = torch.sqrt(torch.sum(weight * weight, dim=[1, 2]))   # norm(w)
+    weight = n * weight / (wn.view(-1, 1, 1) + 1e-5)
     return weight
 
 
