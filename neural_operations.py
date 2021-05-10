@@ -236,18 +236,14 @@ class FactorizedReduce(nn.Module):
     def __init__(self, C_in, C_out):
         super(FactorizedReduce, self).__init__()
         assert C_out % 2 == 0
-        self.conv_1 = Conv2D(C_in, C_out // 4, 1, stride=2, padding=0, bias=True)
-        self.conv_2 = Conv2D(C_in, C_out // 4, 1, stride=2, padding=0, bias=True)
-        self.conv_3 = Conv2D(C_in, C_out // 4, 1, stride=2, padding=0, bias=True)
-        self.conv_4 = Conv2D(C_in, C_out - 3 * (C_out // 4), 1, stride=2, padding=0, bias=True)
+        self.conv_1 = Conv1D(C_in, C_out // 4, 1, stride=2, padding=0, bias=True)
+        self.conv_2 = Conv1D(C_in, C_out - (C_out // 4), 1, stride=2, padding=0, bias=True)
 
     def forward(self, x):
         out = act(x)
         conv1 = self.conv_1(out)
-        conv2 = self.conv_2(out[:, :, 1:, 1:])
-        conv3 = self.conv_3(out[:, :, :, 1:])
-        conv4 = self.conv_4(out[:, :, 1:, :])
-        out = torch.cat([conv1, conv2, conv3, conv4], dim=1)
+        conv2 = self.conv_2(out[:, :, 1:])
+        out = torch.cat([conv1, conv2], dim=1)
         return out
 
 
