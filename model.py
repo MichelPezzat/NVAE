@@ -116,7 +116,6 @@ class AutoEncoder(nn.Module):
         #self.crop_output = self.dataset == 'mnist'
         self.use_se = use_se
         self.res_dist = res_dist
-        self.num_bits = num_x_bits
         self.checkpoint_res = checkpoint_res
         #self.spectral = args.spectral
         #self.multispectral = args.multispectral
@@ -560,7 +559,7 @@ class AutoEncoder(nn.Module):
 
     def decoder_output(self, logits):
 
-        return DiscMixLogistic(logits, self.num_mix_output, num_bits=self.num_bits)
+        return DiscMixLogistic(logits, self.num_mix_output)
 
 
     def spectral_norm_parallel(self):
