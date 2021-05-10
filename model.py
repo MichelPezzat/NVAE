@@ -103,42 +103,47 @@ class PairedCellAR(nn.Module):
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, args, arch_instance):
+    def __init__(self, sample_length,num_nf, num_latent_scales, num_groups_per_scale,
+                num_latent_per_group, min_groups_per_scale,
+                num_channels_enc, num_preprocess_blocks,
+                num_preprocess_cells, num_channels_dec,
+                num_postprocess_cells, use_se, res_dist,
+                ada_groups,checkpoint_res,arch_instance):
         super(AutoEncoder, self).__init__()
         #self.writer = writer
         self.arch_instance = arch_instance
         #self.dataset = args.dataset
         #self.crop_output = self.dataset == 'mnist'
-        self.use_se = args['use_se']
-        self.res_dist = args.res_dist
-        self.num_bits = args.num_x_bits
-        self.checkpoint_res = args.checkpoint_res
+        self.use_se = use_se
+        self.res_dist = res_dist
+        self.num_bits = num_x_bits
+        self.checkpoint_res = checkpoint_res
         #self.spectral = args.spectral
         #self.multispectral = args.multispectral
 
-        self.num_latent_scales = args.num_latent_scales         # number of spatial scales that latent layers will reside
-        self.num_groups_per_scale = args.num_groups_per_scale   # number of groups of latent vars. per scale
-        self.num_latent_per_group = args.num_latent_per_group   # number of latent vars. per group
-        self.groups_per_scale = groups_per_scale(self.num_latent_scales, self.num_groups_per_scale, args.ada_groups,
-                                                 minimum_groups=args.min_groups_per_scale)
+        self.num_latent_scales = num_latent_scales         # number of spatial scales that latent layers will reside
+        self.num_groups_per_scale = num_groups_per_scale   # number of groups of latent vars. per scale
+        self.num_latent_per_group = num_latent_per_group   # number of latent vars. per group
+        self.groups_per_scale = groups_per_scale(self.num_latent_scales, self.num_groups_per_scale, ada_groups,
+                                                 minimum_groups=min_groups_per_scale)
 
         self.vanilla_vae = self.num_latent_scales == 1 and self.num_groups_per_scale == 1
 
         # encoder parameteres
-        self.num_channels_enc = args.num_channels_enc
-        self.num_channels_dec = args.num_channels_dec
-        self.num_preprocess_blocks = args.num_preprocess_blocks  # block is defined as series of Normal followed by Down
-        self.num_preprocess_cells = args.num_preprocess_cells   # number of cells per block
-        self.num_cell_per_cond_enc = args.num_cell_per_cond_enc  # number of cell for each conditional in encoder
+        self.num_channels_enc = num_channels_enc
+        self.num_channels_dec = num_channels_dec
+        self.num_preprocess_blocks = num_preprocess_blocks  # block is defined as series of Normal followed by Down
+        self.num_preprocess_cells = num_preprocess_cells   # number of cells per block
+        self.num_cell_per_cond_enc = num_cell_per_cond_enc  # number of cell for each conditional in encoder
 
         # decoder parameters
         # self.num_channels_dec = args.num_channels_dec
-        self.num_postprocess_blocks = args.num_postprocess_blocks
-        self.num_postprocess_cells = args.num_postprocess_cells
-        self.num_cell_per_cond_dec = args.num_cell_per_cond_dec  # number of cell for each conditional in decoder
+        self.num_postprocess_blocks = num_postprocess_blocks
+        self.num_postprocess_cells = num_postprocess_cells
+        self.num_cell_per_cond_dec = num_cell_per_cond_dec  # number of cell for each conditional in decoder
 
         # general cell parameters
-        self.input_size = args.sample_length
+        self.input_size = sample_length
 
         # decoder param
         self.num_mix_output = 10
@@ -158,8 +163,8 @@ class AutoEncoder(nn.Module):
         else:
             self.enc_tower, mult = self.init_encoder_tower(mult)
 
-        self.with_nf = args.num_nf > 0
-        self.num_flows = args.num_nf
+        self.with_nf = num_nf > 0
+        self.num_flows = num_nf
 
         self.enc0 = self.init_encoder0(mult)
         self.enc_sampler, self.dec_sampler, self.nf_cells, self.enc_kv, self.dec_kv, self.query = \
