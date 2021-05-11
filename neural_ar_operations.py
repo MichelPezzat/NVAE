@@ -144,16 +144,16 @@ class ELUConv(nn.Module):
 
 
 class ARInvertedResidual(nn.Module):
-    def __init__(self, inz, inf, ex=6, dil=1, k=5, causal=False,
+    def __init__(self, inz, inf, ex=6, dil=1, k=5,
         mode='SAME',checkpoint_res=False):
         super(ARInvertedResidual, self).__init__()
         hidden_dim = int(round(inz * ex))
         padding = dil * (k - 1) // 2
         layers = []
-        layers.extend([ARConv1d(inz, hidden_dim, kernel_size=3, padding=1, causal = causal, mode = mode),
+        layers.extend([ARConv1d(inz, hidden_dim, kernel_size=3, padding=1, causal = True, mode = mode),
                        nn.ELU(inplace=True)])
         layers.extend([ARConv1d(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
-                                        causal=causal, mode=mode),
+                                        causal=True, mode=mode),
                       nn.ELU(inplace=True)])
         self.checkpoint_res = checkpoint_res
         if self.checkpoint_res == 1:
