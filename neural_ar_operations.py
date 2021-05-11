@@ -153,7 +153,7 @@ class ARInvertedResidual(nn.Module):
         layers.extend([ARConv1d(inz, hidden_dim, kernel_size=3, padding=1, causal = causal, mode = mode),
                        nn.ELU(inplace=True)])
         layers.extend([ARConv1d(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
-                                        causal =causal, mode=self.mode),
+                                        causal=causal, mode=mode),
                       nn.ELU(inplace=True)])
         self.checkpoint_res = checkpoint_res
         if self.checkpoint_res == 1:
