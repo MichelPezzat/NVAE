@@ -71,7 +71,7 @@ class CellAR(nn.Module):
             self.param = MixLogCDFParam(num_z, num_mix=3, num_ftr=self.conv.hidden_dim)
         else:
             # 0.1 helps bring mu closer to 0 initially
-            self.mu = ARELUConv(self.conv.hidden_dim, num_z, kernel_size=1, padding=0, masked=True, zero_diag=False,
+            self.mu = ARELUConv(self.conv.hidden_dim, num_z, kernel_size=1, padding=0, causal=True, zero_diag=False,
                                 weight_init_coeff=0.1, checkpoint_res=checkpoint_res)
 
     def forward(self, z, ftr):
