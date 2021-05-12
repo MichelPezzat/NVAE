@@ -344,7 +344,12 @@ class AutoEncoder(nn.Module):
         assert len(x.shape) == 3
         x = x.permute(0,2,1).float()
         return x
-
+    
+    def postprocess(self, x):
+        # x: NTC [-1,1] <- NCT [-1,1]
+        x = x.permute(0,2,1)
+        return x
+    
     def forward(self, x, global_step, args):
         
         if args.fp16:
@@ -356,7 +361,8 @@ class AutoEncoder(nn.Module):
                                       groups_per_scale=self.groups_per_scale, fun='square')
         
         x_in = self.preprocess(x)
-        
+        if args.fp16:
+            x_in = x_in.half()        
         s = self.stem(2 * x_in - 1.0)
 
         # perform pre-processing
@@ -494,7 +500,7 @@ class AutoEncoder(nn.Module):
         norm_loss = self.spectral_norm_parallel()
         
         #x_target = audio_postprocess(x.float(), args)
-        x_out = audio_postprocess(output.sample(), args)
+        #x_out = audio_postprocess(output.sample(), args)
         
         #spec_loss = _spectral_loss(x_target, x_out, args)
         #multispec_loss = _multispectral_loss(x_target, x_out, args)
@@ -521,7 +527,7 @@ class AutoEncoder(nn.Module):
         for key, val in metrics.items():
             metrics[key] = val.detach()
 
-        return x_out, loss, metrics
+        return output, loss, metrics
 
     def sample(self, num_samples, t):
         scale_ind = 0
