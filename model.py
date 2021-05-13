@@ -552,7 +552,7 @@ class AutoEncoder(nn.Module):
                 s = cell(s, z)
                 idx_dec += 1
             else:
-                s = cell(s)
+                s = cell(s, sample=True)
                 if cell.cell_type == 'up_dec':
                     scale_ind += 1
 
@@ -560,7 +560,7 @@ class AutoEncoder(nn.Module):
             s = self.stem_decoder(z)
 
         for cell in self.post_process:
-            s = cell(s)
+            s = cell(s, sample=True)
 
         logits = self.image_conditional(s)
         output = self.decoder_output(logits).sample()
