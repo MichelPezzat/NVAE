@@ -318,10 +318,10 @@ class SE(nn.Module):
                                 nn.Linear(num_hidden, Cout), nn.Sigmoid())
 
     def forward(self, x):
-        se = torch.mean(x, dim=[2, 3])
+        se = torch.mean(x, dim=2)
         se = se.view(se.size(0), -1)
         se = self.se(se)
-        se = se.view(se.size(0), -1, 1, 1)
+        se = se.view(se.size(0), -1, 1)
         return x * se
 
 
