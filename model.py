@@ -25,7 +25,7 @@ CHANNEL_MULT = 2
 
 
 class Cell(nn.Module):
-    def __init__(self, Cin, Cout, cell_type, arch, use_se,checkpoint_res=False):
+    def __init__(self, Cin, Cout, cell_type, arch, use_se):
         super(Cell, self).__init__()
         self.cell_type = cell_type
 
@@ -38,7 +38,7 @@ class Cell(nn.Module):
             stride = get_stride_for_cell_type(self.cell_type) if i == 0 else 1
             C = Cin if i == 0 else Cout
             primitive = arch[i]
-            op = OPS[primitive](C, Cout, stride,checkpoint_res)
+            op = OPS[primitive](C, Cout, stride)
             self._ops.append(op)
 
         # SE
@@ -56,7 +56,7 @@ class Cell(nn.Module):
 
 
 class CellAR(nn.Module):
-    def __init__(self, num_z, num_ftr, num_c, arch, checkpoint_res=False):
+    def __init__(self, num_z, num_ftr, num_c, arch):
         super(CellAR, self).__init__()
         assert num_c % num_z == 0
 
@@ -64,7 +64,7 @@ class CellAR(nn.Module):
 
         # s0 will the random samples
         ex = 6
-        self.conv = ARInvertedResidual(num_z, num_ftr, ex=ex, checkpoint_res=checkpoint_res)
+        self.conv = ARInvertedResidual(num_z, num_ftr, ex=ex)
 
         self.use_mix_log_cdf = False
         if self.use_mix_log_cdf:
@@ -72,7 +72,7 @@ class CellAR(nn.Module):
         else:
             # 0.1 helps bring mu closer to 0 initially
             self.mu = ARELUConv(self.conv.hidden_dim, num_z, kernel_size=1, padding=0, causal=True,
-                                weight_init_coeff=0.1, checkpoint_res=checkpoint_res)
+                                weight_init_coeff=0.1)
 
     def forward(self, z, ftr):
         s = self.conv(z, ftr)
@@ -89,10 +89,10 @@ class CellAR(nn.Module):
 
 
 class PairedCellAR(nn.Module):
-    def __init__(self, num_z, num_ftr, num_c, arch=None,checkpoint_res=False):
+    def __init__(self, num_z, num_ftr, num_c, arch=None):
         super(PairedCellAR, self).__init__()
-        self.cell1 = CellAR(num_z, num_ftr, num_c, arch, checkpoint_res)
-        self.cell2 = CellAR(num_z, num_ftr, num_c, arch, checkpoint_res)
+        self.cell1 = CellAR(num_z, num_ftr, num_c, arch)
+        self.cell2 = CellAR(num_z, num_ftr, num_c, arch)
 
     def forward(self, z, ftr):
         new_z, log_det1 = self.cell1(z, ftr)
@@ -109,7 +109,7 @@ class AutoEncoder(nn.Module):
                 num_channels_enc, num_preprocess_blocks,
                 num_preprocess_cells, num_channels_dec,
                 num_postprocess_cells, num_postprocess_blocks,
-                use_se, res_dist,ada_groups,checkpoint_res,
+                use_se, res_dist,ada_groups,
                 num_x_bits,arch_instance):
         super(AutoEncoder, self).__init__()
         #self.writer = writer
@@ -119,7 +119,6 @@ class AutoEncoder(nn.Module):
         self.use_se = use_se
         self.res_dist = res_dist
         self.num_bits = num_x_bits
-        self.checkpoint_res = checkpoint_res
         #self.spectral = args.spectral
         #self.multispectral = args.multispectral
 
@@ -215,12 +214,12 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['down_pre']
                     num_ci = int(self.num_channels_enc * mult)
                     num_co = int(CHANNEL_MULT * num_ci)
-                    cell = Cell(num_ci, num_co, cell_type='down_pre', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                    cell = Cell(num_ci, num_co, cell_type='down_pre', arch=arch, use_se=self.use_se)
                     mult = CHANNEL_MULT * mult
                 else:
                     arch = self.arch_instance['normal_pre']
                     num_c = self.num_channels_enc * mult
-                    cell = Cell(num_c, num_c, cell_type='normal_pre', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                    cell = Cell(num_c, num_c, cell_type='normal_pre', arch=arch, use_se=self.use_se)
 
                 pre_process.append(cell)
 
@@ -233,7 +232,7 @@ class AutoEncoder(nn.Module):
                 for c in range(self.num_cell_per_cond_enc):
                     arch = self.arch_instance['normal_enc']
                     num_c = int(self.num_channels_enc * mult)
-                    cell = Cell(num_c, num_c, cell_type='normal_enc', arch=arch, use_se=self.use_se,checkpoint_res=self.checkpoint_res)
+                    cell = Cell(num_c, num_c, cell_type='normal_enc', arch=arch, use_se=self.use_se)
                     enc_tower.append(cell)
 
                 # add encoder combiner
@@ -248,7 +247,7 @@ class AutoEncoder(nn.Module):
                 arch = self.arch_instance['down_enc']
                 num_ci = int(self.num_channels_enc * mult)
                 num_co = int(CHANNEL_MULT * num_ci)
-                cell = Cell(num_ci, num_co, cell_type='down_enc', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                cell = Cell(num_ci, num_co, cell_type='down_enc', arch=arch, use_se=self.use_se)
                 enc_tower.append(cell)
                 mult = CHANNEL_MULT * mult
 
@@ -276,7 +275,7 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['ar_nn']
                     num_c1 = int(self.num_channels_enc * mult)
                     num_c2 = 8 * self.num_latent_per_group  # use 8x features
-                    nf_cells.append(PairedCellAR(self.num_latent_per_group, num_c1, num_c2, arch, self.checkpoint_res))
+                    nf_cells.append(PairedCellAR(self.num_latent_per_group, num_c1, num_c2, arch))
                 if not (s == 0 and g == 0):  # for the first group, we use a fixed standard Normal.
                     num_c = int(self.num_channels_dec * mult)
                     cell = nn.Sequential(
@@ -297,7 +296,7 @@ class AutoEncoder(nn.Module):
                 if not (s == 0 and g == 0):
                     for c in range(self.num_cell_per_cond_dec):
                         arch = self.arch_instance['normal_dec']
-                        cell = Cell(num_c, num_c, cell_type='normal_dec', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                        cell = Cell(num_c, num_c, cell_type='normal_dec', arch=arch, use_se=self.use_se)
                         dec_tower.append(cell)
 
                 cell = DecCombinerCell(num_c, self.num_latent_per_group, num_c, cell_type='combiner_dec')
@@ -308,7 +307,7 @@ class AutoEncoder(nn.Module):
                 arch = self.arch_instance['up_dec']
                 num_ci = int(self.num_channels_dec * mult)
                 num_co = int(num_ci / CHANNEL_MULT)
-                cell = Cell(num_ci, num_co, cell_type='up_dec', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                cell = Cell(num_ci, num_co, cell_type='up_dec', arch=arch, use_se=self.use_se)
                 dec_tower.append(cell)
                 mult = mult / CHANNEL_MULT
 
@@ -322,12 +321,12 @@ class AutoEncoder(nn.Module):
                     arch = self.arch_instance['up_post']
                     num_ci = int(self.num_channels_dec * mult)
                     num_co = int(num_ci / CHANNEL_MULT)
-                    cell = Cell(num_ci, num_co, cell_type='up_post', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                    cell = Cell(num_ci, num_co, cell_type='up_post', arch=arch, use_se=self.use_se)
                     mult = mult / CHANNEL_MULT
                 else:
                     arch = self.arch_instance['normal_post']
                     num_c = int(self.num_channels_dec * mult)
-                    cell = Cell(num_c, num_c, cell_type='normal_post', arch=arch, use_se=self.use_se, checkpoint_res=self.checkpoint_res)
+                    cell = Cell(num_c, num_c, cell_type='normal_post', arch=arch, use_se=self.use_se)
 
                 post_process.append(cell)
 
