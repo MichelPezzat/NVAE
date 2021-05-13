@@ -80,6 +80,10 @@ def normalize_weight_jit(log_weight_norm, weight):
     return weight
 
 
+def _convert_conv_weights_to_fp16(l):
+    if isinstance(l, Conv1D):
+        l.weight.data = l.weight.data.half()
+
 class Conv1D(nn.Conv1d):
     """Allows for weights as input."""
 
