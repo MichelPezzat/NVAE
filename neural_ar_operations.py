@@ -70,7 +70,11 @@ def create_conv_mask(kernel_size, c_in, g_in, c_out, zero_diag, mirror):
 def norm(t, dim):
     return torch.sqrt(torch.sum(t * t, dim))
 
-
+def _convert_arconv_weights_to_fp16(l):
+    if isinstance(l, ARConv1d):
+        l.weight.data = l.weight.data.half()
+        
+        
 class ARConv1d(nn.Conv1d):
     """Allows for weights as input."""
 
