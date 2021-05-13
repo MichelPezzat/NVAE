@@ -114,7 +114,7 @@ class ARConv1d(nn.Conv1d):
         """
         self.weight_normalized = self.normalize_weight()
         bias = self.bias
-        out = F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x), self.stride,
+        out = F.conv1d(x, self.weight_normalized, bias, self.stride,
                         self.padding, self.dilation, self.groups)
         if self.causal and self.padding is not 0:
             out = out[:, :, :-self.padding]
@@ -125,9 +125,8 @@ class ELUConv(nn.Module):
     """ReLU + Conv2d + BN."""
 
     def __init__(self, C_in, C_out, kernel_size, padding=0, dilation=1, causal=False,
-        mode='SAME', weight_init_coeff=1.0, checkpoint_res=False):
+        mode='SAME', weight_init_coeff=1.0):
         super(ELUConv, self).__init__()
-        self.checkpoint_res = checkpoint_res
         self.conv_0 = ARConv1d(C_in, C_out, kernel_size, stride=1, padding=padding, bias=True, dilation=dilation,
                               causal = causal, mode = mode)
         # change the initialized log weight norm
@@ -139,17 +138,14 @@ class ELUConv(nn.Module):
             x (torch.Tensor): of size (B, C_in, H)
         """
         out = F.elu(x)
-        if self.checkpoint_res == 1:
-            out = checkpoint(self.conv_0, (out, ), self.conv_0.parameters(), True)
-        else:
-            out = self.conv_0(out)
+        out = self.conv_0(out)
             
         return out
 
 
 class ARInvertedResidual(nn.Module):
     def __init__(self, inz, inf, ex=6, dil=1, k=5,
-        mode='SAME',checkpoint_res=False):
+        mode='SAME'):
         super(ARInvertedResidual, self).__init__()
         hidden_dim = int(round(inz * ex))
         padding = dil * (k - 1) // 2
@@ -159,22 +155,13 @@ class ARInvertedResidual(nn.Module):
         layers.extend([ARConv1d(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
                                         causal=True, mode=mode),
                       nn.ELU(inplace=True)])
-        self.checkpoint_res = checkpoint_res
-        if self.checkpoint_res == 1:
-            if dist.get_rank() == 0:
-                print("Checkpointing convs")
-            self.layers = nn.ModuleList(layers)
-        else:
-            self.convz = nn.Sequential(*layers)
+        
+        self.convz = nn.Sequential(*layers)
         self.hidden_dim = hidden_dim
 
     def forward(self, z, ftr):
-        if self.checkpoint_res == 1:
-            for layer in self.layers:
-                x = checkpoint(layer, (z, ), layer.parameters(), True)
-            return z
-        else:
-            return self.convz(z)
+
+        return self.convz(z)
 
 
 
