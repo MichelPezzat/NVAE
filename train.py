@@ -32,10 +32,10 @@ def main(args):
     writer = utils.Writer(args.global_rank, args.save)
 
     # Get data loaders.
-    train_queue, valid_queue, num_classes = datasets.get_loaders(args)
-    args.num_total_iter = len(train_queue) * args.epochs
-    warmup_iters = len(train_queue) * args.warmup_epochs
-    swa_start = len(train_queue) * (args.epochs - 1)
+    data_processor = DataProcessor(hps)
+    args.num_total_iter = len(data_processor.train_loader) * args.epochs
+    warmup_iters = len(data_processor.train_loader) * args.warmup_epochs
+    swa_start = len(data_processor.train_loader) * (args.epochs - 1)
 
     arch_instance = utils.get_arch_cells(args.arch_instance)
 
@@ -79,8 +79,8 @@ def main(args):
     for epoch in range(init_epoch, args.epochs):
         # update lrs.
         if args.distributed:
-            train_queue.sampler.set_epoch(global_step + args.seed)
-            valid_queue.sampler.set_epoch(0)
+            data_processor.train_sampler.set_epoch(epoch)
+            data_processor.test_sampler.set_epoch(0)
 
         if epoch > args.warmup_epochs:
             cnn_scheduler.step()
@@ -89,7 +89,7 @@ def main(args):
         logging.info('epoch %d', epoch)
 
         # Training.
-        train_nelbo, global_step = train(train_queue, model, cnn_optimizer, grad_scalar, global_step, warmup_iters, writer, logging)
+        train_nelbo, global_step = train(data_processor, model, cnn_optimizer, grad_scalar, global_step, warmup_iters, writer, logging)
         logging.info('train_nelbo %f', train_nelbo)
         writer.add_scalar('train/nelbo', train_nelbo, global_step)
 
@@ -137,12 +137,12 @@ def main(args):
     writer.close()
 
 
-def train(train_queue, model, cnn_optimizer, grad_scalar, global_step, warmup_iters, writer, logging):
+def train(data_processor, model, cnn_optimizer, grad_scalar, global_step, warmup_iters, writer, logging):
     alpha_i = utils.kl_balancer_coeff(num_scales=model.num_latent_scales,
                                       groups_per_scale=model.groups_per_scale, fun='square')
     nelbo = utils.AvgrageMeter()
     model.train()
-    for step, x in enumerate(train_queue):
+    for step, x in logger.get_range(data_processor.train_loader)
         x = x[0] if len(x) > 1 else x
         x = x.cuda()
 
