@@ -216,18 +216,18 @@ class BNSwishConv(nn.Module):
         self.bn_act = SyncBatchNormSwish(C_in, eps=BN_EPS, momentum=0.05)
         self.conv_0 = Conv1D(C_in, C_out, kernel_size, stride=stride, padding=padding, bias=True, dilation=dilation)
 
-    def forward(self, x):
+    def forward(self, x, sample=False):
         """
         Args:
             x (torch.Tensor): of size (B, C_in, H, W)
         """
-        if self.checkpoint_res == 1:
+        if self.checkpoint_res == 1 and not sample:
             out = checkpoint(self.bn_act, (x, ), self.bn_act.parameters(), True)
         else:
             out = self.bn_act(x)
         if self.upsample:
             out = F.interpolate(out, scale_factor=2, mode='nearest')
-        if self.checkpoint_res == 1:
+        if self.checkpoint_res == 1 and not sample:
             out = checkpoint(self.conv_0, (out, ), self.conv_0.parameters(), True) 
         else:
             out = self.conv_0(out)
@@ -301,8 +301,8 @@ class ConvBNSwish(nn.Module):
         else:
             self.conv = nn.Sequential(*conv)
 
-    def forward(self, x):
-        if self.checkpoint_res == 1:
+    def forward(self, x, sample=False):
+        if self.checkpoint_res == 1 and not sample:
             for layer in self.conv:
                 x = checkpoint(layer, (x, ), layer.parameters(), True)
             return x
@@ -347,5 +347,5 @@ class InvertedResidual(nn.Module):
         layers0.extend(layers)
         self.conv = nn.Sequential(*layers0)
 
-    def forward(self, x):
-        return self.conv(x)
+    def forward(self, x, sample=False):
+        return self.conv(x, sample)
