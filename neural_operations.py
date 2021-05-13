@@ -114,7 +114,7 @@ class Conv1D(nn.Conv1d):
             with torch.no_grad():
                 weight = self.weight / (norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-5)
                 bias = None
-                out = F.conv1d(x, weight.type_as(x), bias.type_as(x), self.stride, self.padding, self.dilation, self.groups)
+                out = F.conv1d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
                 mn = torch.mean(out, dim=[0, 2])
                 st = 5 * torch.std(out, dim=[0, 2])
 
@@ -130,7 +130,7 @@ class Conv1D(nn.Conv1d):
         self.weight_normalized = self.normalize_weight()
 
         bias = self.bias
-        return F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x), self.stride,
+        return F.conv1d(x, self.weight_normalized, bias, self.stride,
                         self.padding, self.dilation, self.groups)
 
     def normalize_weight(self):
