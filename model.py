@@ -45,11 +45,11 @@ class Cell(nn.Module):
         if self.use_se:
             self.se = SE(Cout, Cout)
 
-    def forward(self, s):
+    def forward(self, s, sample=False):
         # skip branch
         skip = self.skip(s)
         for i in range(self._num_nodes):
-            s = self._ops[i](s)
+            s = self._ops[i](s, sample)
 
         s = self.se(s) if self.use_se else s
         return skip + 0.1 * s
