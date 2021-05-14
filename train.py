@@ -58,8 +58,8 @@ def main(args):
         cnn_optimizer, float(args.epochs - args.warmup_epochs - 1), eta_min=args.learning_rate_min)
     grad_scalar = GradScaler(2**10)
 
-    num_output = utils.num_output(args.dataset)
-    bpd_coeff = 1. / np.log(2.) / num_output
+    #num_output = utils.num_output(args.dataset)
+    #bpd_coeff = 1. / np.log(2.) / num_output
 
     # if load
     checkpoint_file = os.path.join(args.save, 'checkpoint.pt')
@@ -127,7 +127,7 @@ def main(args):
                             'grad_scalar': grad_scalar.state_dict()}, checkpoint_file)
 
     # Final validation
-    valid_neg_log_p, valid_nelbo = test(valid_queue, model, num_samples=1000, args=args, logging=logging)
+    valid_neg_log_p, valid_nelbo = test(valid_queue, model, num_samples=4, args=args, logging=logging)
     logging.info('final valid nelbo %f', valid_nelbo)
     logging.info('final valid neg log p %f', valid_neg_log_p)
     writer.add_scalar('val/neg_log_p', valid_neg_log_p, epoch + 1)
@@ -147,7 +147,7 @@ def train(data_processor, model, cnn_optimizer, grad_scalar, global_step, warmup
         x = x.cuda()
 
         # change bit length
-        x = utils.pre_process(x, args.num_x_bits)
+        #x = utils.pre_process(x, args.num_x_bits)
 
         # warm-up lr
         if global_step < warmup_iters:
@@ -244,7 +244,7 @@ def test(valid_queue, model, num_samples, args, logging):
         x = x.cuda()
 
         # change bit length
-        x = utils.pre_process(x, args.num_x_bits)
+        #x = utils.pre_process(x, args.num_x_bits)
 
         with torch.no_grad():
             nelbo, log_iw = [], []
