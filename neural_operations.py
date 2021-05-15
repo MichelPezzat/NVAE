@@ -11,6 +11,7 @@ import torch.nn.functional as F
 
 from thirdparty.swish import Swish as SwishFN
 from thirdparty.inplaced_sync_batchnorm import SyncBatchNormSwish
+from thirdparty.linear import Linear
 
 from utils import average_tensor
 from collections import OrderedDict
@@ -314,8 +315,8 @@ class SE(nn.Module):
     def __init__(self, Cin, Cout):
         super(SE, self).__init__()
         num_hidden = max(Cout // 16, 4)
-        self.se = nn.Sequential(nn.Linear(Cin, num_hidden), nn.ReLU(inplace=True),
-                                nn.Linear(num_hidden, Cout), nn.Sigmoid())
+        self.se = nn.Sequential(Linear(Cin, num_hidden), nn.ReLU(inplace=True),
+                                Linear(num_hidden, Cout), nn.Sigmoid())
 
     def forward(self, x):
         se = torch.mean(x, dim=2)
