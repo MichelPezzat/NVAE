@@ -57,7 +57,7 @@ class Linear(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        nn.init.kaiming_uniform_(self.weight, a=torch.sqrt(5))
+        nn.init.kaiming_uniform_(self.weight, a=torch.sqrt(torch.tensor(2.5)))
         if self.bias is not None:
             fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / torch.sqrt(fan_in)
