@@ -49,7 +49,7 @@ class Cell(nn.Module):
         # skip branch
         skip = self.skip(s)
         for i in range(self._num_nodes):
-            s = self._ops[i](s, sample=False)
+            s = self._ops[i](s, sample)
 
         s = self.se(s) if self.use_se else s
         return skip + 0.1 * s
@@ -560,7 +560,7 @@ class AutoEncoder(nn.Module):
             s = self.stem_decoder(z)
 
         for cell in self.post_process:
-            s = cell(s)
+            s = cell(s, sample=True)
 
         logits = self.image_conditional(s)
         output = self.decoder_output(logits).sample()
