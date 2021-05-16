@@ -48,9 +48,9 @@ class Linear(nn.Module):
         super(Linear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
+        self.weight = nn.Parameter(Tensor(out_features, in_features))
         if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_features))
+            self.bias = nn.Parameter(Tensor(out_features))
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
