@@ -1,4 +1,10 @@
-class Linear(Module):
+import torch.nn as nn
+
+
+
+
+
+class Linear(nn.Module):
     r"""Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
     This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
