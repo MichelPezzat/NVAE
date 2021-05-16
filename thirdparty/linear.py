@@ -1,6 +1,9 @@
 import torch
-import torch.nn as nn
+from torch.nn.parameter import Parameter, UninitializedParameter
 from torch import Tensor
+import math
+from torch import functional as F
+from torch.nn import init
 
 
 
@@ -49,17 +52,17 @@ class Linear(nn.Module):
         super(Linear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = nn.Parameter(Tensor(out_features, in_features))
+        self.weight = Parameter(Tensor(out_features, in_features))
         if bias:
-            self.bias = nn.Parameter(Tensor(out_features))
+            self.bias = Parameter(Tensor(out_features))
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        nn.init.kaiming_uniform_(self.weight, a=torch.sqrt(torch.tensor(5)))
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / torch.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
