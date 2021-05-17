@@ -115,7 +115,7 @@ class ARConv1d(nn.Conv1d):
         """
         self.weight_normalized = self.normalize_weight()
         bias = self.bias
-        print(x.type(), bias.type())
+        print(x.type())
         out = F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x), self.stride,
                         self.padding, self.dilation, self.groups)
         if self.causal and self.padding is not 0:
