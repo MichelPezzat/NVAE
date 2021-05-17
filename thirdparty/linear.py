@@ -2,7 +2,7 @@ import torch
 from torch.nn.parameter import Parameter, UninitializedParameter
 from torch import Tensor
 import math
-from torch import functional as F
+from torch.nn import functional as F
 from torch.nn import init
 from torch import nn
 
