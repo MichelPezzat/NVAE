@@ -72,7 +72,6 @@ def norm(t, dim):
 
 def _convert_arconv_weights_to_fp16(l):
     if isinstance(l, ARConv1d):
-        print(l.weight.type())
         l.weight.data = l.weight.data.half()
         
         
