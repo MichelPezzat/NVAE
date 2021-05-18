@@ -93,6 +93,7 @@ class ARConv1d(nn.Conv1d):
             self.padding = dilation * (kernel_size - 1) // 2
         else:
             self.padding = 0
+        print(self.weight.type(),self.bias.type())
 
         # init weight normalizaition parameters
         init = torch.log(norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-2)
