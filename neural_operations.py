@@ -83,7 +83,6 @@ def normalize_weight_jit(log_weight_norm, weight):
 
 def _convert_conv_weights_to_fp16(l):
     if isinstance(l, Conv1D):
-        print(l.weight.type())
         l.weight.data = l.weight.data.half()
 
 class Conv1D(nn.Conv1d):
@@ -133,7 +132,6 @@ class Conv1D(nn.Conv1d):
         self.weight_normalized = self.normalize_weight()
 
         bias = self.bias
-        print(self.weight_normalized.type(), bias.type())
         return F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x), self.stride,
                         self.padding, self.dilation, self.groups)
 
