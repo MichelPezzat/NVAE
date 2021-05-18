@@ -72,6 +72,7 @@ def norm(t, dim):
 
 def _convert_arconv_weights_to_fp16(l):
     if isinstance(l, ARConv1d):
+        print(l.weight.type())
         l.weight.data = l.weight.data.half()
         
         
@@ -93,7 +94,7 @@ class ARConv1d(nn.Conv1d):
             self.padding = dilation * (kernel_size - 1) // 2
         else:
             self.padding = 0
-        print(self.weight.type(),self.bias.type())
+      
 
         # init weight normalizaition parameters
         init = torch.log(norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-2)
