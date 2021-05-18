@@ -98,7 +98,7 @@ class ARConv1d(nn.Conv1d):
  
 
         # init weight normalizaition parameters
-        print(self.log_weight_norm.type(), self.bias.type()) 
+        print(self.weight.type(), self.bias.type()) 
         init = torch.log(norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-2)
         self.log_weight_norm = nn.Parameter(init, requires_grad=True)
         self.weight_normalized = None
