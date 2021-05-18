@@ -176,7 +176,7 @@ class ARInvertedResidual(nn.Module):
         if self.checkpoint_res == 1:
             for layer in self.layers:
                 x = checkpoint(layer, (z, ), layer.parameters(), True)
-            return z
+            return x
         else:
             return self.convz(z)
 
