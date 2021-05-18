@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from collections import OrderedDict
-from neural_operations import Conv1D,ConvBNSwish, normalize_weight_jit
+from neural_operations import ConvBNSwish, normalize_weight_jit
 import thirdparty.dist_adapter as dist
 from thirdparty.checkpoint import checkpoint
 
@@ -86,8 +86,7 @@ class ARConv1D(nn.Conv1d):
             use_shared (bool): Use weights for this layer or not?
         """
         super(ARConv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
-        print(C_in, C_out) 
-        print(self.weight.type(), self.bias.type()) 
+        print(self.weight.type()) 
         self.causal = causal
         self.mode = mode
         if self.causal and self.mode == 'SAME':
@@ -159,9 +158,9 @@ class ARInvertedResidual(nn.Module):
         hidden_dim = int(round(inz * ex))
         padding = dil * (k - 1) // 2
         layers = []
-        layers.extend([Conv1D(inz, hidden_dim, kernel_size=3, padding=1),
+        layers.extend([ARConv1D(inz, hidden_dim, kernel_size=3, padding=1,mode=mode,causal=True),
                        nn.ELU(inplace=True)])
-        layers.extend([Conv1D(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
+        layers.extend([ARConv1D(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
                                         causal=True, mode=mode),
                       nn.ELU(inplace=True)])
         self.checkpoint_res = checkpoint_res
