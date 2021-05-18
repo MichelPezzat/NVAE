@@ -93,11 +93,13 @@ class Conv1D(nn.Conv1d):
             use_shared (bool): Use weights for this layer or not?
         """
         super(Conv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
+        print(self.weight.type(), self.bias.type()) 
 
         self.log_weight_norm = None
         if weight_norm:
             init = norm(self.weight, dim=[1, 2]).view(-1, 1, 1)
             self.log_weight_norm = nn.Parameter(torch.log(init + 1e-2), requires_grad=True)
+          
 
         self.data_init = data_init
         self.init_done = False
