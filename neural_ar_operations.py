@@ -101,6 +101,7 @@ class ARConv1d(nn.Conv1d):
         init = torch.log(norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-2)
         self.log_weight_norm = nn.Parameter(init, requires_grad=True)
         self.weight_normalized = None
+        print(self.log_weight_norm.type(), self.bias.type()) 
 
     def normalize_weight(self):
         weight = self.weight
@@ -117,7 +118,6 @@ class ARConv1d(nn.Conv1d):
         """
         self.weight_normalized = self.normalize_weight()
         bias = self.bias
-        print(x.type())
         out = F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x), self.stride,
                         self.padding, self.dilation, self.groups)
         if self.causal and self.padding is not 0:
