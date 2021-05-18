@@ -87,7 +87,7 @@ class ARConv1d(nn.Conv1d):
             use_shared (bool): Use weights for this layer or not?
         """
         super(ARConv1d, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
-        print(Cin, Cout) 
+        print(C_in, C_out) 
         print(self.weight.type(), self.bias.type()) 
         self.causal = causal
         self.mode = mode
