@@ -132,7 +132,7 @@ class ELUConv(nn.Module):
         mode='SAME', weight_init_coeff=1.0, checkpoint_res=False):
         super(ELUConv, self).__init__()
         self.checkpoint_res = checkpoint_res
-        self.conv_0 = ARConv1d(C_in, C_out, kernel_size, stride=1, padding=padding, bias=True, dilation=dilation,
+        self.conv_0 = ARConv1D(C_in, C_out, kernel_size, stride=1, padding=padding, bias=True, dilation=dilation,
                               causal = causal, mode = mode)
         # change the initialized log weight norm
         self.conv_0.log_weight_norm.data += np.log(weight_init_coeff)
