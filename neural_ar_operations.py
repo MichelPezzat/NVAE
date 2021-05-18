@@ -11,8 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from collections import OrderedDict
-
-from neural_operations import ConvBNSwish, normalize_weight_jit
+from neural_operations import Conv1D,ConvBNSwish, normalize_weight_jit
 import thirdparty.dist_adapter as dist
 from thirdparty.checkpoint import checkpoint
 
@@ -77,7 +76,7 @@ def _convert_arconv_weights_to_fp16(l):
         l.weight.data = l.weight.data.half()
         
         
-class Conv1D(nn.Conv1d):
+class ARConv1D(nn.Conv1d):
     """Allows for weights as input."""
 
     def __init__(self, C_in, C_out, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False,
@@ -86,7 +85,7 @@ class Conv1D(nn.Conv1d):
         Args:
             use_shared (bool): Use weights for this layer or not?
         """
-        super(Conv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
+        super(ARConv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
         print(C_in, C_out) 
         print(self.weight.type(), self.bias.type()) 
         self.causal = causal
@@ -160,7 +159,7 @@ class ARInvertedResidual(nn.Module):
         hidden_dim = int(round(inz * ex))
         padding = dil * (k - 1) // 2
         layers = []
-        layers.extend([Conv1D(inz, hidden_dim, kernel_size=3, padding=1, causal = True, mode = mode),
+        layers.extend([Conv1D(inz, hidden_dim, kernel_size=3, padding=1),
                        nn.ELU(inplace=True)])
         layers.extend([Conv1D(hidden_dim, hidden_dim, groups=hidden_dim, kernel_size=k, padding=padding, dilation=dil,
                                         causal=True, mode=mode),
