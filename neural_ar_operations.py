@@ -71,8 +71,7 @@ def norm(t, dim):
     return torch.sqrt(torch.sum(t * t, dim))
 
 def _convert_arconv_weights_to_fp16(l):
-    if isinstance(l, ARConv1d):
-        print(l.weight.type())
+    if isinstance(l, ARConv1D):
         l.weight.data = l.weight.data.half()
         
         
@@ -86,7 +85,6 @@ class ARConv1D(nn.Conv1d):
             use_shared (bool): Use weights for this layer or not?
         """
         super(ARConv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
-        print(self.weight.type()) 
         self.causal = causal
         self.mode = mode
         if self.causal and self.mode == 'SAME':
@@ -101,7 +99,7 @@ class ARConv1D(nn.Conv1d):
         init = torch.log(norm(self.weight, dim=[1, 2]).view(-1, 1, 1) + 1e-2)
         self.log_weight_norm = nn.Parameter(init, requires_grad=True)
         self.weight_normalized = None
-        print(self.log_weight_norm.type()) 
+
 
     def normalize_weight(self):
         weight = self.weight
