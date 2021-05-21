@@ -95,7 +95,6 @@ class Conv1D(nn.Conv1d):
             use_shared (bool): Use weights for this layer or not?
         """
         super(Conv1D, self).__init__(C_in, C_out, kernel_size, stride, padding, dilation, groups, bias)
-        print(self.weight.type(), self.bias.type()) 
 
         self.log_weight_norm = None
         if weight_norm:
