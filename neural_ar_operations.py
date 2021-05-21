@@ -173,8 +173,8 @@ class ARInvertedResidual(nn.Module):
     def forward(self, z, ftr):
         if self.checkpoint_res == 1:
             for layer in self.layers:
-                x = checkpoint(layer, (z, ), layer.parameters(), True)
-            return x
+                z = checkpoint(layer, (z, ), layer.parameters(), True)
+            return z
         else:
             return self.convz(z)
 
