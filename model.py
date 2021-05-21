@@ -188,7 +188,7 @@ class AutoEncoder(nn.Module):
         self.all_bn_layers = []
         for n, layer in self.named_modules():
             # if isinstance(layer, Conv2D) and '_ops' in n:   # only chose those in cell
-            if isinstance(layer, Conv1D) or isinstance(layer, ARConv1d):
+            if isinstance(layer, Conv1D) or isinstance(layer, ARConv1D):
                 self.all_log_norm.append(layer.log_weight_norm)
                 self.all_conv_layers.append(layer)
             if isinstance(layer, nn.BatchNorm1d) or isinstance(layer, nn.SyncBatchNorm) or \
