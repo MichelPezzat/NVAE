@@ -128,7 +128,7 @@ class ARConv1D(nn.Conv1d):
 class ELUConv(nn.Module):
     """ReLU + Conv2d + BN."""
 
-    def __init__(self, C_in, C_out, kernel_size, padding=0, dilation=1, causal=False,
+    def __init__(self, C_in, C_out, kernel_size, padding=0, dilation=1, causal=True,
         mode='SAME', weight_init_coeff=1.0, checkpoint_res=False):
         super(ELUConv, self).__init__()
         self.checkpoint_res = checkpoint_res
