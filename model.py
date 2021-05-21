@@ -91,6 +91,7 @@ class CellAR(nn.Module):
 class PairedCellAR(nn.Module):
     def __init__(self, num_z, num_ftr, num_c, arch=None,checkpoint_res=False):
         super(PairedCellAR, self).__init__()
+        print(num_z,num_ftr,  num_c)
         self.cell1 = CellAR(num_z, num_ftr, num_c, arch, checkpoint_res)
         self.cell2 = CellAR(num_z, num_ftr, num_c, arch, checkpoint_res)
 
