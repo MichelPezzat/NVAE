@@ -132,7 +132,7 @@ class Conv1D(nn.Conv1d):
         self.weight_normalized = self.normalize_weight()
 
         bias = self.bias
-        return F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x), self.stride,
+        return F.conv1d(x, self.weight_normalized.type_as(x), bias.type_as(x) if bias!=None else bias, self.stride,
                         self.padding, self.dilation, self.groups)
 
     def normalize_weight(self):
