@@ -348,7 +348,7 @@ class InvertedResidual(nn.Module):
         layers0.extend(layers)
         self.checkpoint_res = checkpoint_res
         
-        self.conv = nn.ModuleList(laters0)
+        self.conv = nn.ModuleList(layers0)
 
             
             
