@@ -346,7 +346,18 @@ class InvertedResidual(nn.Module):
                   get_batchnorm(Cout, momentum=0.05)]
 
         layers0.extend(layers)
-        self.conv = nn.Sequential(*layers0)
+        self.checkpoint_res = checkpoint_res
+        
+        self.conv = nn.ModuleList(laters0)
 
+            
+            
     def forward(self, x, sample=False):
-        return self.conv(x, sample)
+        if self.checkpoint_res == 1 and not sample:
+            for layers in self.conv:
+                x = checkpoint(layers, (x, ), block.parameters(), True)
+            return x
+        else:
+            for layers in self.conv:
+                x = self.conv(x)
+            return x
