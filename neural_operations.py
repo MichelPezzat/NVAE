@@ -355,7 +355,7 @@ class InvertedResidual(nn.Module):
     def forward(self, x, sample=False):
         if self.checkpoint_res == 1 and not sample:
             for layers in self.conv:
-                x = checkpoint(layers, (x, ), block.parameters(), True)
+                x = checkpoint(layers, (x, ), layers.parameters(), True)
             return x
         else:
             for layers in self.conv:
