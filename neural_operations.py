@@ -359,5 +359,5 @@ class InvertedResidual(nn.Module):
             return x
         else:
             for layers in self.conv:
-                x = self.conv(x)
+                x = self.layers(x)
             return x
