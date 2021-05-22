@@ -350,7 +350,7 @@ class AutoEncoder(nn.Module):
         x = x.permute(0,2,1)
         return x
     
-    def forward(self, x, global_step, args):
+    def forward(self, x, global_step, args, fp16_out=False):
         
         if args.fp16:
             x = x.half()
@@ -452,6 +452,9 @@ class AutoEncoder(nn.Module):
 
         for cell in self.post_process:
             s = cell(s)
+        
+        if not fp16_out:
+            s = s.float()        
 
         logits = self.image_conditional(s)
 
