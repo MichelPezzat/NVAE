@@ -98,9 +98,10 @@ class DiscLogistic:
 class DiscMixLogistic:
     def __init__(self, param, num_mix=10, num_bits=8):
         B, C, H = param.size()
+        print(param.shape)
         self.num_mix = num_mix
         self.logit_probs = param[:, :num_mix, :] 
-        print(self.logits_probs.shape)# B, M, H, W
+        print(self.logit_probs.shape)# B, M, H, W
         self.means = l[:, num_mix:2 * num_mix, :]                                          # B, 3, M, H, W
         self.log_scales = torch.clamp(l[:, :, 2*num_mix:3 * num_mix, :], min=-7.0)   # B, 3, M, H, W
         self.max_val = 2. ** num_bits - 1
