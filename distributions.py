@@ -98,12 +98,10 @@ class DiscLogistic:
 class DiscMixLogistic:
     def __init__(self, param, num_mix=10, num_bits=8):
         B, C, H = param.size()
-        print(param.shape)
         self.num_mix = num_mix
-        self.logit_probs = param[:, :num_mix, :] 
-        print(self.logit_probs.shape)# B, M, H, W
-        self.means = l[:, num_mix:2 * num_mix, :]                                          # B, 3, M, H, W
-        self.log_scales = torch.clamp(l[:, :, 2*num_mix:3 * num_mix, :], min=-7.0)   # B, 3, M, H, W
+        self.logit_probs = param[:, :num_mix, :] # B, M, H, W
+        self.means = param[:, num_mix:2 * num_mix, :]                                          # B, 3, M, H, W
+        self.log_scales = torch.clamp(param[:, 2*num_mix:3 * num_mix, :], min=-7.0)   # B, 3, M, H, W
         self.max_val = 2. ** num_bits - 1
 
     def log_prob(self, samples):
@@ -113,9 +111,8 @@ class DiscMixLogistic:
 
         B, C, H = samples.size()
         assert C == 1, 'only RGB images are considered.'
-
-        samples = samples.unsqueeze(4)                                                  # B, 3, H , W
-        samples = samples.expand(-1, -1, -1, self.num_mix).permute(0, 1, 3, 2)   # B, 3, M, H, W
+                                               # B, 3, H , W
+        samples = samples.expand_as(means)# B, 3, M, H, W
 
         centered = samples - means                          # B, 3, M, H, W
 
@@ -131,14 +128,14 @@ class DiscMixLogistic:
         log_pdf_mid = mid_in - self.log_scales - 2. * F.softplus(mid_in)
 
         log_prob_mid_safe = torch.where(cdf_delta > 1e-5,
-                                        torch.log(torch.clamp(cdf_delta, min=1e-10)),
+                                        torch.log(torch.clamp(cdf_delta, min=1e-12)),
                                         log_pdf_mid - np.log(self.max_val / 2))
         # the original implementation uses samples > 0.999, this ignores the largest possible pixel value (255)
         # which is mapped to 0.9922
-        log_probs = torch.where(samples < -0.999, log_cdf_plus, torch.where(samples > 0.99, log_one_minus_cdf_min,
+        log_probs = torch.where(samples < -0.999, log_cdf_plus, torch.where(samples > 0.999, log_one_minus_cdf_min,
                                                                             log_prob_mid_safe))   # B, 3, M, H, W
 
-        log_probs = torch.sum(log_probs, 1) + F.log_softmax(self.logit_probs, dim=1)  # B, M, H, W
+        log_probs = log_probs + F.log_softmax(self.logit_probs, -1)  # B, M, H, W
         return torch.logsumexp(log_probs, dim=1)                                      # B, H, W
 
     def sample(self, t=1.):
