@@ -335,7 +335,7 @@ class AutoEncoder(nn.Module):
 
     def init_image_conditional(self, mult):
         C_in = int(self.num_channels_dec * mult)
-        C_out = 10 * self.num_mix_output
+        C_out = 3 * self.num_mix_output
         return nn.Sequential(nn.ELU(),
                              Conv1D(C_in, C_out, 3, padding=1, bias=True))
     
