@@ -105,9 +105,12 @@ class DiscMixLogistic:
         self.max_val = 2. ** num_bits - 1
 
     def log_prob(self, samples):
-        assert torch.max(samples) <= 1.0 and torch.min(samples) >= -1.0
+
+        
         # convert samples to be in [-1, 1]
-       
+        if abs(samples).max() > 1:
+            print('warning: audio amplitude out of range, auto clipped.')
+            samples = samples.clip(-1, 1)
 
         B, C, H = samples.size()
         assert C == 1, 'only RGB images are considered.'
@@ -155,6 +158,5 @@ class DiscMixLogistic:
 
         x0 = torch.clamp(x[:, 0, :], -1, 1.)                                                # B, H, W
 
-        x = x / 2. + 0.5
         return x
 
