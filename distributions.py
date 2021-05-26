@@ -105,9 +105,9 @@ class DiscMixLogistic:
         self.max_val = 2. ** num_bits - 1
 
     def log_prob(self, samples):
-        assert torch.max(samples) <= 1.0 and torch.min(samples) >= 0.0
+        assert torch.max(samples) <= 1.0 and torch.min(samples) >= -1.0
         # convert samples to be in [-1, 1]
-        samples = 2 * samples - 1.0
+       
 
         B, C, H = samples.size()
         assert C == 1, 'only RGB images are considered.'
