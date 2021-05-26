@@ -493,7 +493,7 @@ class AutoEncoder(nn.Module):
         
         kl_coeff = utils.kl_coeff(global_step, args.kl_anneal_portion * args.num_total_iter,
                                       args.kl_const_portion * args.num_total_iter, args.kl_const_coeff)
-        recon_loss = utils.reconstruction_loss(output, x)
+        recon_loss = utils.reconstruction_loss(output, x_in)
         balanced_kl, kl_coeffs, kl_vals = utils.kl_balancer(kl_all, kl_coeff, kl_balance=True, alpha_i=alpha_i)
         
         nelbo_batch = recon_loss + balanced_kl
