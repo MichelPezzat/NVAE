@@ -115,9 +115,9 @@ class DiscMixLogistic:
         B, C, H = samples.size()
         assert C == 1, 'only RGB images are considered.'
                                                # B, 3, H , W
-        samples = samples.expand_as(means)# B, 3, M, H, W
+        samples = samples.expand_as(self.means)# B, 3, M, H, W
 
-        centered = samples - means                          # B, 3, M, H, W
+        centered = samples - self.means                          # B, 3, M, H, W
 
         inv_stdv = torch.exp(- self.log_scales)
         plus_in = inv_stdv * (centered + 1. / self.max_val)
