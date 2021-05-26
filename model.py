@@ -363,7 +363,7 @@ class AutoEncoder(nn.Module):
         x_in = self.preprocess(x)
         if args.fp16:
             x_in = x_in.half()        
-        s = self.stem(2 * x_in - 1.0)
+        s = self.stem(x_in)
 
         # perform pre-processing
         for cell in self.pre_process:
