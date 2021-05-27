@@ -515,17 +515,17 @@ class AutoEncoder(nn.Module):
         loss = torch.mean(nelbo_batch) + norm_loss * wdn_coeff + bn_loss * wdn_coeff 
         
         
-        #metrics.update(dict(
-         #   recon_loss=recon_loss,
-          #  bn_loss =bn_loss,
-           # norm_loss=norm_loss,
-            #wdn_coeff=torch.tensor(wdn_coeff),
-           # kl_all=torch.mean(sum(kl_all)),
-           # kl_coeff= torch.tensor(kl_coeff)
-            #))
+        metrics.update(dict(
+            recon_loss=recon_loss,
+            bn_loss =bn_loss,
+            norm_loss=norm_loss,
+            wdn_coeff=torch.tensor(wdn_coeff),
+            kl_all=torch.mean(sum(kl_all)),
+            kl_coeff= torch.tensor(kl_coeff)
+            ))
         
-        #for key, val in metrics.items():
-         #   metrics[key] = val.detach()
+        for key, val in metrics.items():
+            metrics[key] = val.detach()
 
         return output, loss, metrics
 
