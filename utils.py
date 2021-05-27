@@ -242,7 +242,7 @@ def reconstruction_loss(decoder, x, crop=False):
         recon = recon[:, :, 2:30, 2:30]
     
     if isinstance(decoder, DiscMixLogistic):
-        return - torch.sum(recon, dim=[1, 2])    # summation over RGB is done.
+        return - torch.sum(recon)    # summation over RGB is done.
     else:
         return - torch.sum(recon, dim=[1, 2, 3])
 
