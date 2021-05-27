@@ -352,9 +352,6 @@ class AutoEncoder(nn.Module):
     
     def forward(self, x, global_step, args, fp16_out=False):
         
-        if args.fp16:
-            x = x.half()
-        
         metrics = {}
         
         alpha_i = utils.kl_balancer_coeff(num_scales=self.num_latent_scales,
@@ -496,11 +493,11 @@ class AutoEncoder(nn.Module):
         recon_loss = utils.reconstruction_loss(output, x_in)
         balanced_kl, kl_coeffs, kl_vals = utils.kl_balancer(kl_all, kl_coeff, kl_balance=True, alpha_i=alpha_i)
         
-        nelbo_batch = recon_loss
+        nelbo_batch = recon_loss + balanced_kl
         
         
-        #bn_loss = self.batchnorm_loss()
-        #norm_loss = self.spectral_norm_parallel()
+        bn_loss = self.batchnorm_loss()
+        norm_loss = self.spectral_norm_parallel()
         
         #x_target = audio_postprocess(x.float(), args)
         #x_out = audio_postprocess(output.sample(), args)
@@ -515,13 +512,13 @@ class AutoEncoder(nn.Module):
         else:
             wdn_coeff = args.weight_decay_norm
 
-        loss = torch.mean(nelbo_batch) 
+        loss = nelbo_batch + norm_loss * wdn_coeff + bn_loss * wdn_coeff 
         
         
         metrics.update(dict(
             recon_loss=recon_loss,
-            #bn_loss =bn_loss,
-            #norm_loss=norm_loss,
+            bn_loss =bn_loss,
+            norm_loss=norm_loss,
             wdn_coeff=torch.tensor(wdn_coeff),
             kl_all=torch.mean(sum(kl_all)),
             kl_coeff= torch.tensor(kl_coeff)
