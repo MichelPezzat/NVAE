@@ -496,7 +496,7 @@ class AutoEncoder(nn.Module):
         recon_loss = utils.reconstruction_loss(output, x_in)
         balanced_kl, kl_coeffs, kl_vals = utils.kl_balancer(kl_all, kl_coeff, kl_balance=True, alpha_i=alpha_i)
         
-        nelbo_batch = recon_loss + balanced_kl
+        nelbo_batch = recon_loss
         
         
         #bn_loss = self.batchnorm_loss()
