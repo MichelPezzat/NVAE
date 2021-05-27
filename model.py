@@ -520,8 +520,8 @@ class AutoEncoder(nn.Module):
         
         metrics.update(dict(
             recon_loss=recon_loss,
-            bn_loss =bn_loss,
-            norm_loss=norm_loss,
+            #bn_loss =bn_loss,
+            #norm_loss=norm_loss,
             wdn_coeff=torch.tensor(wdn_coeff),
             kl_all=torch.mean(sum(kl_all)),
             kl_coeff= torch.tensor(kl_coeff)
