@@ -497,7 +497,7 @@ class AutoEncoder(nn.Module):
         balanced_kl, kl_coeffs, kl_vals = utils.kl_balancer(kl_all, kl_coeff, kl_balance=True, alpha_i=alpha_i)
         
         nelbo_batch = recon_loss + balanced_kl
-        loss = torch.mean(nelbo_batch)
+        
         
         bn_loss = self.batchnorm_loss()
         norm_loss = self.spectral_norm_parallel()
@@ -515,7 +515,7 @@ class AutoEncoder(nn.Module):
         else:
             wdn_coeff = args.weight_decay_norm
 
-        loss += bn_loss * wdn_coeff + norm_loss * wdn_coeff 
+        loss = torch.mean(nelbo_batch) + bn_loss * wdn_coeff + norm_loss * wdn_coeff 
         
         
         metrics.update(dict(
