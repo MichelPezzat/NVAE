@@ -499,8 +499,8 @@ class AutoEncoder(nn.Module):
         nelbo_batch = recon_loss + balanced_kl
         
         
-        bn_loss = self.batchnorm_loss()
-        norm_loss = self.spectral_norm_parallel()
+        #bn_loss = self.batchnorm_loss()
+        #norm_loss = self.spectral_norm_parallel()
         
         #x_target = audio_postprocess(x.float(), args)
         #x_out = audio_postprocess(output.sample(), args)
@@ -515,7 +515,7 @@ class AutoEncoder(nn.Module):
         else:
             wdn_coeff = args.weight_decay_norm
 
-        loss = torch.mean(nelbo_batch) + bn_loss * wdn_coeff + norm_loss * wdn_coeff 
+        loss = torch.mean(nelbo_batch) 
         
         
         metrics.update(dict(
