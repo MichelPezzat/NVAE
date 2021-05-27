@@ -97,49 +97,65 @@ class DiscLogistic:
 
 class DiscMixLogistic:
     def __init__(self, param, num_mix=10, num_bits=8):
-        B, C, H = param.size()
+        
+        assert param.dim() == 3
+        assert param.size(1) % 3 == 0
+        num_mix = y_hat.size(1) // 3
+        
+        param = param.transpose(1, 2)
         self.num_mix = num_mix
-        self.logit_probs = param[:, :num_mix, :] # B, M, H, W
-        self.means = param[:, num_mix:2 * num_mix, :]                                          # B, 3, M, H, W
-        self.log_scales = torch.clamp(param[:, 2*num_mix:3 * num_mix, :], min=-7.0)   # B, 3, M, H, W
+        self.logit_probs = param[:, :, :num_mix]
+        self.means = param[:, :, num_mix:2 * num_mix]                                         # B, 3, M, H, W
+        self.log_scales = torch.clamp(param[:, :, 2 * num_mix:3 * num_mix], min=-7.0)  # B, 3, M, H, W
         self.max_val = 2. ** num_bits - 1
 
     def log_prob(self, samples):
 
         
         # convert samples to be in [-1, 1]
-        if abs(samples).max() > 1:
-            print('warning: audio amplitude out of range, auto clipped.')
-            samples = samples.clip(-1, 1)
 
-        B, C, H = samples.size()
-        assert C == 1, 'only RGB images are considered.'
+
                                                # B, 3, H , W
         samples = samples.expand_as(self.means)# B, 3, M, H, W
 
         centered = samples - self.means                          # B, 3, M, H, W
-
-        inv_stdv = torch.exp(- self.log_scales)
-        plus_in = inv_stdv * (centered + 1. / self.max_val)
-        cdf_plus = torch.sigmoid(plus_in)
-        min_in = inv_stdv * (centered - 1. / self.max_val)
-        cdf_min = torch.sigmoid(min_in)
+        inv_stdv = torch.exp(-self.log_scales)
+        plus_in = inv_stdv * (centered + 1. / (num_classes - 1))
+        cdf_plus = F.sigmoid(plus_in)
+        min_in = inv_stdv * (centered - 1. / (num_classes - 1))
+        cdf_min = F.sigmoid(min_in)
+        
         log_cdf_plus = plus_in - F.softplus(plus_in)
-        log_one_minus_cdf_min = - F.softplus(min_in)
+        # log probability for edge case of 255 (before scaling)
+        # equivalent: (1 - F.sigmoid(min_in)).log()
+        log_one_minus_cdf_min = -F.softplus(min_in)
+        # probability for all other cases
         cdf_delta = cdf_plus - cdf_min
         mid_in = inv_stdv * centered
-        log_pdf_mid = mid_in - self.log_scales - 2. * F.softplus(mid_in)
+        # log probability in the center of the bin, to be used in extreme cases
+        # (not actually used in our code)
+        log_pdf_mid = mid_in - log_scales - 2. * F.softplus(mid_in)    # tf equivalent
+        """
+        log_probs = tf.where(x < -0.999, log_cdf_plus,
+                         tf.where(x > 0.999, log_one_minus_cdf_min,
+                                  tf.where(cdf_delta > 1e-5,
+                                           tf.log(tf.maximum(cdf_delta, 1e-12)),
+                                           log_pdf_mid - np.log(127.5))))
+        """
+        # TODO: cdf_delta <= 1e-5 actually can happen. How can we choose the value
+        # for num_classes=65536 case? 1e-7? not sure..
+        inner_inner_cond = (cdf_delta > 1e-5).float()
+        inner_inner_out = inner_inner_cond * \
+             torch.log(torch.clamp(cdf_delta, min=1e-12)) + \
+                 (1. - inner_inner_cond) * (log_pdf_mid - np.log((num_classes - 1) / 2))
+        inner_cond = (samples > 0.999).float()
+        inner_out = inner_cond * log_one_minus_cdf_min + (1. - inner_cond) * inner_inner_out
+        cond = (samples < -0.999).float()
+        log_probs = cond * log_cdf_plus + (1. - cond) * inner_out
 
-        log_prob_mid_safe = torch.where(cdf_delta > 1e-5,
-                                        torch.log(torch.clamp(cdf_delta, min=1e-12)),
-                                        log_pdf_mid - np.log(self.max_val / 2))
-        # the original implementation uses samples > 0.999, this ignores the largest possible pixel value (255)
-        # which is mapped to 0.9922
-        log_probs = torch.where(samples < -0.999, log_cdf_plus, torch.where(samples > 0.999, log_one_minus_cdf_min,
-                                                                            log_prob_mid_safe))   # B, 3, M, H, W
-
-        log_probs = log_probs + F.log_softmax(self.logit_probs, -1)  # B, M, H, W
-        return torch.logsumexp(log_probs, dim=1)                                      # B, H, W
+        log_probs = log_probs + F.log_softmax(self.logit_probs, -1)  
+        
+        return torch.logsumexp(log_probs)                                      # B, H, W
 
     def sample(self, t=1.):
         gumbel = -torch.log(- torch.log(torch.Tensor(self.logit_probs.size()).uniform_(1e-5, 1. - 1e-5).cuda()))  # B, M, H, W
