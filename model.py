@@ -510,8 +510,8 @@ class AutoEncoder(nn.Module):
         
         if args.weight_decay_norm_anneal:
             assert args.weight_decay_norm_init > 0 and args.weight_decay_norm > 0, 'init and final wdn should be positive.'
-            wdn_coeff = (1. - kl_coeff) * torch.log(args.weight_decay_norm_init) + kl_coeff * torch.log(args.weight_decay_norm)
-            wdn_coeff = torch.exp(wdn_coeff)
+            wdn_coeff = (1. - kl_coeff) * np.log(args.weight_decay_norm_init) + kl_coeff * np.log(args.weight_decay_norm)
+            wdn_coeff = np.exp(wdn_coeff)
         else:
             wdn_coeff = args.weight_decay_norm
 
@@ -522,7 +522,7 @@ class AutoEncoder(nn.Module):
             recon_loss=recon_loss,
             bn_loss =bn_loss,
             norm_loss=norm_loss,
-            wdn_coeff=wdn_coeff,
+            wdn_coeff=torch.tensor(wdn_coeff),
             kl_all=torch.mean(sum(kl_all)),
             kl_coeff= torch.tensor(kl_coeff)
             ))
