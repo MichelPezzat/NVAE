@@ -527,7 +527,7 @@ class AutoEncoder(nn.Module):
         for key, val in metrics.items():
             metrics[key] = val.detach()
 
-        return output, loss, metrics
+        return output, torch.mean(loss), metrics
 
     def sample(self, num_samples, t):
         scale_ind = 0
